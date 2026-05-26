@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0a0a0f"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="SPX Rotate"/>
+  <meta name="description" content="SPX Rotation Calculator — Scenario A–D Macro Framework"/>
+  <link rel="manifest" href="manifest.json"/>
+  <title>SPX Rotation Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --green:#00ff87; --amber:#ffd93d; --red:#ff453a; --orange:#ff9500;
+      --bg:#0a0a0f; --card:rgba(255,255,255,.03); --border:rgba(255,255,255,.07);
+      --text:rgba(255,255,255,.85); --muted:rgba(255,255,255,.35);
+      --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;overflow-x:hidden}
+
+    .header{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:calc(var(--safe-top) + 12px) 16px 12px}
+    .header-label{font-size:9px;letter-spacing:.28em;color:rgba(0,255,135,.7);margin-bottom:2px}
+    .header-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.07em;line-height:1}
+    .header-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .header-sub{font-size:9px;color:var(--muted);letter-spacing:.1em;margin-top:2px}
+
+    .tabs{display:flex;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);position:sticky;top:72px;z-index:99}
+    .tab{flex:1;padding:10px 4px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-align:center;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+    .tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+    .page{display:none;padding:14px 12px calc(var(--safe-bottom) + 80px)}
+    .page.active{display:block}
+
+    /* Score card */
+    .score-card{border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid var(--border-color,var(--border));background:var(--bg-color,var(--card));transition:all .4s}
+    .score-card.rotate{--border-color:rgba(0,255,135,.4);--bg-color:rgba(0,255,135,.06)}
+    .score-card.prepare{--border-color:rgba(255,217,61,.4);--bg-color:rgba(255,217,61,.06)}
+    .score-card.monitor{--border-color:rgba(255,149,0,.4);--bg-color:rgba(255,149,0,.06)}
+    .score-card.hold{--border-color:rgba(255,69,58,.4);--bg-color:rgba(255,69,58,.06)}
+    .score-top{display:flex;align-items:center;gap:16px}
+    .gauge-wrap{position:relative;width:100px;height:100px;flex-shrink:0}
+    .gauge-wrap svg{transform:rotate(-90deg)}
+    .gauge-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .gauge-num{font-size:28px;font-weight:700;line-height:1}
+    .gauge-label{font-size:8px;color:var(--muted);letter-spacing:.1em}
+    .verdict-block{flex:1;min-width:0}
+    .verdict-main{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.06em;line-height:1}
+    .verdict-sub{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5}
+    .score-bar-wrap{margin-top:14px}
+    .score-bar-track{position:relative;height:6px;background:rgba(255,255,255,.06);border-radius:3px}
+    .score-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--amber) 55%,var(--green));transition:width .8s ease}
+    .score-bar-marker{position:absolute;top:-3px;width:1px;height:12px;background:rgba(255,255,255,.25)}
+    .score-bar-labels{display:flex;justify-content:space-between;margin-top:4px}
+    .score-bar-labels span{font-size:8px;color:var(--muted);letter-spacing:.06em}
+    .traffic{display:flex;gap:14px;margin-top:12px}
+    .traffic-item{display:flex;align-items:center;gap:5px}
+    .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .dot.amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+    .dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+    .traffic-count{font-size:13px;font-weight:700}
+    .traffic-lbl{font-size:9px;color:var(--muted);letter-spacing:.08em}
+
+    /* Gate warning */
+    .gate-warn{background:rgba(255,69,58,.06);border:1px solid rgba(255,69,58,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:11px;color:rgba(255,150,140,.9);line-height:1.6}
+    .gate-warn strong{color:var(--red)}
+
+    /* Summary grid */
+    .summary-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+    .summary-title{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-bottom:10px}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .summary-item{font-size:10px;color:var(--muted)}
+    .summary-val{font-size:15px;font-weight:700;margin-top:2px}
+
+    /* Indicator cards */
+    .ind-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--ic,var(--border));border-radius:10px;padding:14px;margin-bottom:10px}
+    .ind-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .ind-title-row{display:flex;align-items:center;gap:6px}
+    .ind-title{font-size:11px;font-weight:600;letter-spacing:.03em}
+    .ind-value{font-size:13px;font-weight:700;color:var(--ic);flex-shrink:0}
+    .ind-desc{font-size:9px;color:var(--muted);margin:4px 0 6px 14px;line-height:1.5}
+    .ind-source-row{margin:4px 0 10px 14px;display:flex;align-items:center;gap:6px}
+    .ind-source-link{font-size:9px;color:var(--green);text-decoration:none;border-bottom:1px solid rgba(0,255,135,.3)}
+    .ind-source-hint{font-size:8px;color:rgba(255,255,255,.2)}
+
+    input[type=range]{width:100%;accent-color:var(--ic);cursor:pointer;height:4px;background:transparent}
+    input[type=range]::-webkit-slider-runnable-track{height:4px;background:rgba(255,255,255,.08);border-radius:2px}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;margin-top:-8px;cursor:pointer;background:var(--ic)}
+    .slider-ends{display:flex;justify-content:space-between;margin-top:3px}
+    .slider-ends span{font-size:8px;color:rgba(255,255,255,.2)}
+
+    .toggle3{display:flex;gap:4px;margin-top:8px}
+    .t3-btn{flex:1;padding:10px 4px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.02em;transition:all .2s;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:rgba(255,255,255,.4)}
+    .t3-btn.ag{border-color:var(--green);background:rgba(0,255,135,.1);color:var(--green)}
+    .t3-btn.aa{border-color:var(--amber);background:rgba(255,217,61,.1);color:var(--amber)}
+    .t3-btn.ar{border-color:var(--red);background:rgba(255,69,58,.1);color:var(--red)}
+
+    .ind-status{margin-top:10px;padding:6px 10px;border-radius:5px;background:rgba(255,255,255,.03);display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.4;color:var(--ic)}
+    .ind-score-row{display:flex;align-items:center;gap:6px;margin-top:8px}
+    .ind-score-track{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:2px}
+    .ind-score-fill{height:100%;border-radius:2px;transition:width .4s,background .3s;background:var(--ic)}
+    .ind-score-num{font-size:9px;color:var(--muted);min-width:30px;text-align:right}
+
+    /* Legend */
+    .legend-band{border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--lb);background:var(--lbg)}
+    .legend-band.rotate{--lb:rgba(0,255,135,.35);--lbg:rgba(0,255,135,.06)}
+    .legend-band.prepare{--lb:rgba(255,217,61,.35);--lbg:rgba(255,217,61,.06)}
+    .legend-band.monitor{--lb:rgba(255,149,0,.35);--lbg:rgba(255,149,0,.06)}
+    .legend-band.hold{--lb:rgba(255,69,58,.35);--lbg:rgba(255,69,58,.06)}
+    .legend-band-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .legend-band-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em}
+    .legend-band-range{font-size:11px;font-weight:700}
+    .legend-band-desc{font-size:10px;color:var(--muted);line-height:1.6}
+    .legend-band-action{margin-top:8px;font-size:10px;font-weight:600;letter-spacing:.04em}
+    .legend-gates{background:rgba(255,69,58,.06);border:1px solid rgba(255,69,58,.2);border-radius:10px;padding:14px;margin-bottom:10px}
+    .legend-gate-item{font-size:10px;color:var(--muted);line-height:1.7;padding-left:10px;border-left:2px solid rgba(255,69,58,.3);margin-bottom:6px}
+    .legend-gate-item strong{color:rgba(255,150,140,.9)}
+    .sec-title{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    .hist-item{display:flex;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+    .hist-item:last-child{border-bottom:none}
+    .hist-score{font-size:13px;font-weight:700;min-width:40px}
+    .hist-detail{flex:1;padding-left:10px}
+    .hist-event{font-size:10px;color:var(--text)}
+    .hist-outcome{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.4}
+
+    /* Notif banner */
+    .notif-banner{position:fixed;top:0;left:0;right:0;z-index:200;background:linear-gradient(135deg,#0a2a1a,#0a0a0f);border-bottom:2px solid var(--green);padding:calc(var(--safe-top) + 12px) 16px 14px;transform:translateY(-100%);transition:transform .4s ease}
+    .notif-banner.show{transform:translateY(0)}
+    .nb-title{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green);letter-spacing:.06em}
+    .nb-body{font-size:11px;color:var(--muted);margin-top:4px}
+    .nb-close{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:8px}
+
+    /* Bottom nav */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.95);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;padding-bottom:var(--safe-bottom)}
+    .nav-btn{flex:1;padding:12px 4px 10px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .2s}
+    .nav-btn.active{color:var(--green)}
+    .nav-icon{font-size:20px;line-height:1}
+
+    /* Update button */
+    .update-btn{width:100%;padding:14px;background:rgba(0,255,135,.08);border:1px solid rgba(0,255,135,.3);border-radius:10px;color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.12em;cursor:pointer;margin-bottom:14px;transition:all .2s}
+    .update-btn:active{background:rgba(0,255,135,.18)}
+
+    /* Strategy */
+  .opt-header{display:flex;align-items:center;justify-content:space-between}
+  .strat-card{border-radius:14px;padding:18px;margin-bottom:14px;border:1px solid var(--sc-border);background:var(--sc-bg)}
+  .strat-card.rotate{--sc-border:rgba(0,255,135,.4);--sc-bg:rgba(0,255,135,.06)}
+  .strat-card.prepare{--sc-border:rgba(255,217,61,.4);--sc-bg:rgba(255,217,61,.06)}
+  .strat-card.monitor{--sc-border:rgba(255,149,0,.4);--sc-bg:rgba(255,149,0,.06)}
+  .strat-card.hold{--sc-border:rgba(255,69,58,.4);--sc-bg:rgba(255,69,58,.06)}
+  .strat-verdict{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;margin-bottom:12px}
+  .alloc-table{width:100%;border-collapse:collapse;margin:10px 0}
+  .alloc-table th{font-size:8px;letter-spacing:.12em;color:var(--muted);text-align:left;padding:4px 0;border-bottom:1px solid var(--border)}
+  .alloc-table td{font-size:11px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+  .alloc-table tr:last-child td{border-bottom:none}
+  .fund-name{color:var(--text);font-weight:600}
+  .fund-pct{font-weight:700;text-align:right;min-width:42px}
+  .fund-shift{font-size:9px;text-align:right;min-width:56px}
+  .shift-bar-wrap{padding:0 8px;width:90px}
+  .shift-bar-track{height:4px;background:rgba(255,255,255,.06);border-radius:2px;position:relative}
+  .shift-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+  .action-box{margin-top:14px;padding:12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+  .action-title{font-size:9px;letter-spacing:.15em;color:var(--muted);margin-bottom:8px}
+  .action-step{display:flex;gap:8px;font-size:10px;color:var(--text);padding:4px 0;line-height:1.5}
+  .action-num{color:var(--sc-color,var(--green));font-weight:700;min-width:16px}
+
+  /* Where to find */
+    .find-card{background:rgba(0,255,135,.04);border:1px solid rgba(0,255,135,.12);border-radius:10px;padding:14px;margin-bottom:14px}
+    .find-title{font-size:9px;letter-spacing:.2em;color:var(--green);margin-bottom:10px}
+    .find-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    .find-item:last-child{border-bottom:none}
+    .find-name{font-size:10px;font-weight:600;color:var(--text);min-width:90px;flex-shrink:0}
+    .find-detail{flex:1}
+    .find-link{font-size:9px;color:var(--green);text-decoration:none;display:block}
+    .find-hint{font-size:8px;color:var(--muted);margin-top:2px;line-height:1.4}
+  </style>
+</head>
+<body>
+
+<div class="notif-banner" id="nb">
+  <div class="nb-title" id="nbTitle">ROTATE NOW</div>
+  <div class="nb-body" id="nbBody"></div>
+  <button class="nb-close" onclick="document.getElementById('nb').classList.remove('show')">✕</button>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div>
+      <div class="header-label">AWARE SUPER // SCENARIO A–D</div>
+      <div class="header-title">SPX ROTATE</div>
+    </div>
+    <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <button id="refreshBtn" onclick="fetchLatestData()" style="background:rgba(0,255,135,.1);border:1px solid rgba(0,255,135,.35);border-radius:6px;color:#00ff87;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;padding:7px 12px;cursor:pointer;transition:all .2s">⟳ REFRESH</button>
+      <div style="font-size:9px;color:var(--muted)" id="lastUpdate">Tap refresh for latest data</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('score')">SCORE</button>
+  <button class="tab" onclick="showTab('indicators')">INDICATORS</button>
+  <button class="tab" onclick="showTab('strategy')">STRATEGY</button>
+  <button class="tab" onclick="showTab('legend')">LEGEND</button>
+</div>
+
+<!-- ═══ SCORE PAGE ═══ -->
+<div class="page active" id="page-score">
+
+  <div class="score-card hold" id="scoreCard">
+    <div class="score-top">
+      <div class="gauge-wrap">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/>
+          <circle cx="50" cy="50" r="44" fill="none" id="gaugeFill" stroke="#ff453a" stroke-width="8"
+            stroke-dasharray="276.5" stroke-dashoffset="276.5" stroke-linecap="round"
+            style="transition:stroke-dashoffset .8s ease,stroke .4s"/>
+        </svg>
+        <div class="gauge-text">
+          <div class="gauge-num" id="gaugeNum" style="color:#ff453a">0</div>
+          <div class="gauge-label">/ 100</div>
+        </div>
+      </div>
+      <div class="verdict-block">
+        <div class="verdict-main" id="verdictMain" style="color:#ff453a">HOLD CASH</div>
+        <div class="verdict-sub" id="verdictSub">Update indicators to calculate</div>
+        <div class="traffic" style="margin-top:10px">
+          <div class="traffic-item"><div class="dot green"></div><span class="traffic-count" id="tGreen">0</span><span class="traffic-lbl">GREEN</span></div>
+          <div class="traffic-item"><div class="dot amber"></div><span class="traffic-count" id="tAmber">0</span><span class="traffic-lbl">AMBER</span></div>
+          <div class="traffic-item"><div class="dot red"></div><span class="traffic-count" id="tRed">0</span><span class="traffic-lbl">RED</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-track">
+        <div class="score-bar-marker" style="left:35%"></div>
+        <div class="score-bar-marker" style="left:55%"></div>
+        <div class="score-bar-marker" style="left:75%"></div>
+        <div class="score-bar-fill" id="scoreBarFill" style="width:0%"></div>
+      </div>
+      <div class="score-bar-labels"><span>HOLD</span><span>MONITOR</span><span>PREPARE</span><span>ROTATE</span></div>
+    </div>
+  </div>
+
+  <div class="gate-warn" id="gateWarn" style="display:none">
+    <strong>⚠ HARD GATE BLOCKED:</strong> <span id="gateText"></span>
+  </div>
+
+  <div id="liveBanner" style="display:none;background:rgba(0,255,135,.05);border:1px solid rgba(0,255,135,.2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:10px;color:var(--muted);line-height:1.7"></div>
+
+  <div class="summary-card">
+    <div class="summary-title">CURRENT READINGS</div>
+    <div class="summary-grid" id="summaryGrid" style="grid-template-columns:1fr 1fr"></div>
+  </div>
+
+  <!-- Where to find data -->
+  <div class="find-card">
+    <div class="find-title">CURRENT READINGS — MAY 25, 2026</div>
+    <div style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.7">
+      SPX <strong style="color:var(--red)">7,473</strong> (new ATH 7,522, only <strong style="color:var(--red)">-0.65%</strong> below peak) ·
+      VIX <strong style="color:var(--red)">16.6</strong> ·
+      10Y Yield <strong style="color:var(--amber)">4.51% ↑ Rising</strong> ·
+      CPI <strong style="color:var(--green)">2.4%</strong> ·
+      Fed <strong style="color:var(--amber)">Paused 3.75%</strong> ·
+      AUD/USD <strong style="color:var(--red)">0.717 ↑ Rising</strong>
+    </div>
+    <div style="font-size:9px;color:rgba(0,255,135,.6);margin-bottom:12px;line-height:1.5;padding:8px;background:rgba(0,255,135,.04);border-radius:6px;border:1px solid rgba(0,255,135,.1)">
+      Tap <strong style="color:#00ff87">⟳ REFRESH</strong> at the top of this page to automatically fetch the latest values using Claude's web search. Updates all 9 indicators in one tap.
+    </div>
+    <div style="font-size:9px;letter-spacing:.15em;color:var(--muted);margin-bottom:8px">WHERE TO VERIFY EACH INDICATOR</div>
+    <div class="find-item">
+      <div class="find-name">SPX Drop</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://finance.yahoo.com/quote/%5EGSPC/" target="_blank">finance.yahoo.com → S&amp;P 500</a>
+        <div class="find-hint">Note current price vs ATH of 7,522 (May 26, 2026). Drop = (current − 7522) ÷ 7522 × 100</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">VIX</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://finance.yahoo.com/quote/%5EVIX/" target="_blank">finance.yahoo.com → VIX</a>
+        <div class="find-hint">Current VIX level shown on quote page</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">HY Spread</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://fred.stlouisfed.org/series/BAMLH0A0HYM2" target="_blank">fred.stlouisfed.org → BAMLH0A0HYM2</a>
+        <div class="find-hint">Value shown in %. Multiply by 100 for bps (e.g. 3.2% = 320bps)</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">CPI Inflation</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://www.bls.gov/cpi/" target="_blank">bls.gov/cpi → Latest CPI release</a>
+        <div class="find-hint">Year-over-year % change shown in headline figure</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">10Y Treasury</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://fred.stlouisfed.org/series/DGS10" target="_blank">fred.stlouisfed.org → DGS10</a>
+        <div class="find-hint">Is the chart trending up, flat, or down over past month?</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">Fed Policy</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://www.federalreserve.gov/monetarypolicy/openmarket.htm" target="_blank">federalreserve.gov → Open Market Ops</a>
+        <div class="find-hint">Latest FOMC decision — cutting, paused, or hiking?</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">Earnings</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://insight.factset.com/hubfs/resources/Research%20Desk/Earnings%20Insight/EarningsInsight_052325.pdf" target="_blank">FactSet Earnings Insight (weekly)</a>
+        <div class="find-hint">Are forward EPS estimates rising, flat, or falling?</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">Geopolitical</div>
+      <div class="find-detail">
+        <div class="find-hint" style="color:var(--text)">Count active major conflicts: Ukraine, Middle East, Taiwan tension, Sahel, South China Sea</div>
+      </div>
+    </div>
+    <div class="find-item">
+      <div class="find-name">AUD/USD</div>
+      <div class="find-detail">
+        <a class="find-link" href="https://finance.yahoo.com/quote/AUDUSD=X/" target="_blank">Yahoo Finance → AUD/USD</a>
+        <div class="find-hint">Is AUD rising, flat, or falling vs USD over past 2–4 weeks? Falling AUD during a crash = green for Australian investors in unhedged international funds</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ INDICATORS PAGE ═══ -->
+<div class="page" id="page-indicators">
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+  <button class="update-btn" style="flex:1;margin-bottom:0" onclick="resetToCurrentData()">⟳ RESET TO CURRENT DATA</button>
+  <button class="update-btn" style="flex:1;margin-bottom:0;background:rgba(0,255,135,.15);border-color:rgba(0,255,135,.5)" onclick="saveAndScore()">✓ SAVE &amp; SCORE</button>
+</div>
+<div id="currentDataBanner" style="display:none;background:rgba(0,255,135,.05);border:1px solid rgba(0,255,135,.15);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:9px;color:rgba(0,255,135,.8);line-height:1.7;letter-spacing:.03em"></div>
+  <div id="indicatorCards"></div>
+</div>
+
+
+<!-- ═══ STRATEGY PAGE ═══ -->
+<div class="page" id="page-strategy">
+
+  <div id="strategyCard"></div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div class="sec-title">AWARE SUPER INDEXED OPTIONS — FULL SPECTRUM</div>
+    <div style="font-size:9px;color:var(--muted);margin-bottom:12px;line-height:1.6">All four options below are low-cost passively managed indexed funds. Switching is free and can be done online at Member Online any time.</div>
+
+    <div class="opt-row" style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
+      <div class="opt-header">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">High Growth Indexed</div>
+        <div style="font-size:10px;color:var(--green);font-weight:700">90% growth</div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5">Maximum equity exposure. Use at score ≥75 when full rotation is validated. Targets 90% shares/growth, 10% defensive. Highest volatility, highest long-term return potential.</div>
+      <div class="alloc-bar-wrap" style="margin-top:8px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden">
+          <div style="width:90%;background:var(--green);opacity:.8"></div>
+          <div style="width:10%;background:rgba(255,255,255,.15)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:8px;color:var(--green)">90% growth</span>
+          <span style="font-size:8px;color:var(--muted)">10% defensive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-row" style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
+      <div class="opt-header">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">Balanced Indexed <span style="font-size:9px;color:var(--amber);margin-left:6px">● YOUR CURRENT</span></div>
+        <div style="font-size:10px;color:var(--amber);font-weight:700">75% growth</div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5">Your existing 60% allocation. Strong long-term returns via passive management. Targets 75% shares/growth, 25% defensive. Suitable at score 55–74.</div>
+      <div class="alloc-bar-wrap" style="margin-top:8px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden">
+          <div style="width:75%;background:var(--amber);opacity:.8"></div>
+          <div style="width:25%;background:rgba(255,255,255,.15)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:8px;color:var(--amber)">75% growth</span>
+          <span style="font-size:8px;color:var(--muted)">25% defensive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-row" style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px">
+      <div class="opt-header">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">Conservative Balanced Indexed</div>
+        <div style="font-size:10px;color:var(--orange);font-weight:700">59% growth</div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5">Partial defensive positioning. Use as a transitional option at score 35–54 if you want to reduce cash drag while maintaining protection. 59% shares/growth, 41% defensive.</div>
+      <div class="alloc-bar-wrap" style="margin-top:8px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden">
+          <div style="width:59%;background:var(--orange);opacity:.8"></div>
+          <div style="width:41%;background:rgba(255,255,255,.15)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:8px;color:var(--orange)">59% growth</span>
+          <span style="font-size:8px;color:var(--muted)">41% defensive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-row">
+      <div class="opt-header">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">Cash <span style="font-size:9px;color:var(--amber);margin-left:6px">● YOUR CURRENT</span></div>
+        <div style="font-size:10px;color:var(--red);font-weight:700">0% growth</div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5">Your existing 40% allocation. Term deposits and short-term instruments. Stable but loses real purchasing power at ~2–3% per year in current inflation. Hold until rotation conditions met.</div>
+      <div class="alloc-bar-wrap" style="margin-top:8px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden">
+          <div style="width:100%;background:rgba(255,255,255,.15)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:8px;color:var(--red)">0% growth</span>
+          <span style="font-size:8px;color:var(--muted)">100% defensive</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:rgba(0,255,135,.04);border:1px solid rgba(0,255,135,.12);border-radius:10px;padding:14px;margin-bottom:14px;font-size:10px;color:var(--muted);line-height:1.7;">
+    <div style="font-size:9px;letter-spacing:.2em;color:var(--green);margin-bottom:8px">🇦🇺 AUSTRALIAN INVESTOR NOTE</div>
+    <strong style="color:var(--text)">AUD/USD amplifies your returns at rotation.</strong> Your Balanced Indexed and High Growth Indexed funds hold unhedged international equities. When the SPX crashes, the AUD typically falls simultaneously (risk-off). This means your fund falls <em>less</em> in AUD terms than the raw SPX drop implies. At recovery, you benefit from both equity appreciation AND AUD appreciation — a double tailwind. A falling AUD at the rotation point is therefore a green signal specific to your situation as an Australian investor. This is why AUD/USD is included as an indicator (weight 7%) and why the effective SPX entry threshold in AUD terms may be slightly lower than the 20% hard gate suggests.
+  </div>
+
+  <div class="settings-section" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+    <div style="font-size:9px;letter-spacing:.2em;color:var(--muted);margin-bottom:10px">ALPHA VANTAGE KEY — SPY &amp; VIX (FREE)</div>
+    <div style="font-size:9px;color:var(--muted);line-height:1.6;margin-bottom:10px">
+      Required for live SPY and VIX data via ⟳ REFRESH.<br>
+      Free key at <strong style="color:var(--green)">alphavantage.co/support/#api-key</strong><br>
+      Takes 30 seconds. Gives 25 calls/day — enough for daily use.
+    </div>
+    <input class="settings-input api-key-input" id="avKeyInput" type="text" placeholder="Paste Alpha Vantage key" autocomplete="off" spellcheck="false" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 10px"/>
+    <div style="font-size:9px;margin-top:6px" id="avKeyStatus" class="key-status missing">⚠ Not set — SPY/VIX will use manual values</div>
+    <button onclick="saveAVKey()" style="margin-top:8px;width:100%;padding:12px;border-radius:8px;border:1px solid var(--green);background:rgba(0,255,135,.08);color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer">SAVE ALPHA VANTAGE KEY</button>
+  </div>
+
+  <div style="background:rgba(255,69,58,.04);border:1px solid rgba(255,69,58,.15);border-radius:10px;padding:14px;font-size:10px;color:var(--muted);line-height:1.7;">
+    <strong style="color:var(--red)">Important:</strong> This is analytical context based on the Scenario A–D macro framework, not personalised financial advice. Consider speaking with an Aware Super adviser before making allocation changes. Switching is free — log in at <span style="color:var(--green)">login.aware.com.au</span> → Investments → Change investment options.
+  </div>
+
+</div>
+
+<!-- ═══ LEGEND PAGE ═══ -->
+<div class="page" id="page-legend">
+
+  <div style="margin-bottom:18px">
+    <div class="sec-title">VERDICT BANDS</div>
+    <div class="legend-band rotate">
+      <div class="legend-band-header">
+        <div class="legend-band-name" style="color:var(--green)">ROTATE NOW</div>
+        <div class="legend-band-range" style="color:var(--green)">75 – 100</div>
+      </div>
+      <div class="legend-band-desc">All primary conditions aligned. SPX ≥20% down, VIX ≥40 (genuine panic), spreads ≥800bps, inflation falling toward 4%, Fed cutting, earnings stabilising. Maximum historical recovery probability.</div>
+      <div class="legend-band-action" style="color:var(--green)">→ Execute Cash → Growth Fund rotation</div>
+    </div>
+    <div class="legend-band prepare">
+      <div class="legend-band-header">
+        <div class="legend-band-name" style="color:var(--amber)">PREPARE TO ROTATE</div>
+        <div class="legend-band-range" style="color:var(--amber)">55 – 74</div>
+      </div>
+      <div class="legend-band-desc">Core price trigger met (SPX ≥20% down) but secondary indicators not fully aligned. Inflation may still be elevated or credit spreads not yet stressed. Conditions building — do not rotate yet.</div>
+      <div class="legend-band-action" style="color:var(--amber)">→ Review daily. Prepare paperwork. Do not execute yet.</div>
+    </div>
+    <div class="legend-band monitor">
+      <div class="legend-band-header">
+        <div class="legend-band-name" style="color:var(--orange)">MONITOR CLOSELY</div>
+        <div class="legend-band-range" style="color:var(--orange)">35 – 54</div>
+      </div>
+      <div class="legend-band-desc">Conditions developing. SPX approaching trigger, or some secondary indicators stressed. Could recover from here (false signal) or continue deteriorating (true entry developing).</div>
+      <div class="legend-band-action" style="color:var(--orange)">→ Check weekly. Do not act. Preserve optionality.</div>
+    </div>
+    <div class="legend-band hold">
+      <div class="legend-band-header">
+        <div class="legend-band-name" style="color:var(--red)">HOLD CASH</div>
+        <div class="legend-band-range" style="color:var(--red)">0 – 34</div>
+      </div>
+      <div class="legend-band-desc">Insufficient conditions. SPX has not corrected meaningfully, or inflation too hot for growth assets to perform in real terms. The real loss from waiting is the cost of discipline. Pay it.</div>
+      <div class="legend-band-action" style="color:var(--red)">→ Remain in cash/conservative. Check monthly.</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:18px">
+    <div class="sec-title">HARD GATES — OVERRIDE ALL SCORES</div>
+    <div class="legend-gates">
+      <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:8px">⚠ Both must be clear before score matters:</div>
+      <div class="legend-gate-item"><strong>SPX drawdown &lt; 20%</strong> — Minimum entry threshold not met. A 20% fall is the floor, not the target. Rotating before this sacrifices the optionality you are preserving by holding cash.</div>
+      <div class="legend-gate-item"><strong>CPI inflation &gt; 6%</strong> — Growth assets lose real value even if they rise nominally. A balanced fund returning 8% against 10% inflation is a 2% real loss.</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:18px">
+    <div class="sec-title">HISTORICAL CALIBRATION</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div class="hist-item">
+        <div class="hist-score" style="color:var(--green)">~82</div>
+        <div class="hist-detail">
+          <div class="hist-event">COVID crash — March 23, 2020</div>
+          <div class="hist-outcome">SPX -34%, VIX 85, spreads 1100bps, Fed cutting. Perfect signal. Market recovered 100% within 5 months.</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-score" style="color:var(--green)">~76</div>
+        <div class="hist-detail">
+          <div class="hist-event">GFC trough — March 9, 2009</div>
+          <div class="hist-outcome">SPX -57%, VIX 80, Fed at zero. Strong signal — recovery took longer than 2020 but was substantial.</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-score" style="color:var(--amber)">~58</div>
+        <div class="hist-detail">
+          <div class="hist-event">2022 rate-hike bear market trough</div>
+          <div class="hist-outcome">SPX -25% but inflation at 8%+ blocked full score. Hard gate correctly held back rotation — real returns negative for months after.</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-score" style="color:var(--red)">~28</div>
+        <div class="hist-detail">
+          <div class="hist-event">Nikkei corrections 1992–2003</div>
+          <div class="hist-outcome">Multiple 20%+ rallies that looked like entry points. Japan stagflation kept score low. Rotating on price alone lost 60% over 14 years.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:10px;color:var(--muted);line-height:1.7;">
+    You are rotating <strong style="color:var(--text)">Aware Super Cash → Growth Fund</strong> on a significant SPX correction. Your properties (Paddington + North Sydney, LVR &lt;50%, grandfathered CGT) provide staying power. Your SMSF gold hedges Scenario A–D tail risk. This calculator tells you when the Growth Fund entry is validated by macro conditions — not price alone.<br><br>
+    <strong style="color:var(--text)">9 indicators, weighted for Australian investors:</strong> The framework is primarily US macro (SPX, VIX, credit spreads, CPI, Treasury yield, Fed policy, earnings) because your Aware Super funds are predominantly internationally invested. The AUD/USD trend is added specifically for your context — a falling AUD during a crash amplifies recovery returns for unhedged international funds and is a meaningful green signal for Australian super investors.
+  </div>
+
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" onclick="showTab('score')" id="nav-score"><span class="nav-icon">📊</span>SCORE</button>
+  <button class="nav-btn" onclick="showTab('indicators')" id="nav-indicators"><span class="nav-icon">🎛</span>INDICATORS</button>
+  <button class="nav-btn" onclick="showTab('strategy')" id="nav-strategy"><span class="nav-icon">💼</span>STRATEGY</button>
+  <button class="nav-btn" onclick="showTab('legend')" id="nav-legend"><span class="nav-icon">📖</span>LEGEND</button>
+</div>
+
+<script>
+// ═══ INDICATORS ═══
+const INDS = [
+  { id:'spxDrop', label:'SPX Drawdown from Peak', weight:22, type:'slider', min:0, max:60, step:0.5, unit:'%',
+    fmt:v=>`-${v.toFixed(1)}%`,
+    desc:'How far SPX has fallen from its all-time high (7,522 set May 26, 2026). Currently only 0.65% below ATH. Your hard gate minimum is 20%.',
+    score:v=>v>=30?100:v>=20?60:v>=10?20:0,
+    status:v=>v>=30?'green':v>=20?'amber':'red',
+    greenLabel:'≥30% — Deep value, strong historical buy signal',
+    amberLabel:'20–30% — At your trigger threshold',
+    redLabel:'<20% — Hard gate: do not rotate',
+    link:'https://finance.yahoo.com/quote/%5EGSPC/', linkLabel:'Yahoo Finance → S&P 500', defaultVal:0.6 },
+  { id:'vix', label:'VIX Fear Index', weight:18, type:'slider', min:10, max:90, step:1, unit:'',
+    fmt:v=>`${v.toFixed(0)}`,
+    desc:'CBOE Volatility Index. ≥40 = genuine panic and capitulation. Orderly declines without VIX spikes are often false bottoms.',
+    score:v=>v>=40?100:v>=30?50:v>=20?20:0,
+    status:v=>v>=40?'green':v>=30?'amber':'red',
+    greenLabel:'≥40 — Panic selling, capitulation likely',
+    amberLabel:'30–40 — Elevated fear, not peak',
+    redLabel:'<30 — Orderly decline, not a bottom signal',
+    link:'https://finance.yahoo.com/quote/%5EVIX/', linkLabel:'Yahoo Finance → VIX', defaultVal:16.59 },
+  { id:'creditSpread', label:'HY Credit Spread (bps)', weight:14, type:'slider', min:200, max:1200, step:25, unit:'bps',
+    fmt:v=>`${Math.round(v)}bps`,
+    desc:'ICE BofA US HY OAS spread. FRED shows it in % — multiply by 100 for bps (e.g. 3.2% = 320bps). >800bps = systemic stress.',
+    score:v=>v>=800?100:v>=600?55:v>=400?20:0,
+    status:v=>v>=800?'green':v>=600?'amber':'red',
+    greenLabel:'≥800bps — Systemic stress, deep value entry',
+    amberLabel:'600–800bps — Significant stress building',
+    redLabel:'<600bps — Credit market not yet stressed',
+    link:'https://fred.stlouisfed.org/series/BAMLH0A0HYM2', linkLabel:'FRED → BAMLH0A0HYM2', defaultVal:320 },
+  { id:'inflation', label:'CPI Inflation YoY', weight:13, type:'slider', min:0, max:15, step:0.1, unit:'%',
+    fmt:v=>`${v.toFixed(1)}%`,
+    desc:'Annual CPI inflation rate. Hard gate blocks rotation above 6%. Growth assets lose real value in high-inflation environments.',
+    score:v=>v<=4?100:v<=6?60:v<=8?20:0,
+    status:v=>v<=4?'green':v<=6?'amber':'red',
+    greenLabel:'≤4% — Inflation controlled, rotation safe',
+    amberLabel:'4–6% — Moderating, watchable',
+    redLabel:'>6% — Hard gate: real returns at risk',
+    link:'https://www.bls.gov/cpi/', linkLabel:'BLS.gov → CPI', defaultVal:2.4 },
+  { id:'treasuryTrend', label:'10Y Treasury Trend', weight:9, type:'toggle3', options:['Falling','Flat','Rising'], values:[0,1,2],
+    desc:'Direction of 10-year Treasury yield over past month. Currently RISING (4.29%→4.57%) — bond market is selling, not buying safety. Falling = bond market backing recovery. Rising = not convinced.',
+    score:v=>v===0?100:v===1?40:0,
+    status:v=>v===0?'green':v===1?'amber':'red',
+    greenLabel:'Falling — Bond market backing recovery',
+    amberLabel:'Flat — Uncertain signal',
+    redLabel:'Rising — Bond market not buying it',
+    link:'https://fred.stlouisfed.org/series/DGS10', linkLabel:'FRED → DGS10', defaultVal:2 },
+  { id:'fedPolicy', label:'Fed Policy Direction', weight:9, type:'toggle3', options:['Cutting','Paused','Hiking'], values:[0,1,2],
+    desc:'Current Federal Reserve stance. Cutting + falling inflation = maximum tailwind for growth assets.',
+    score:v=>v===0?100:v===1?40:0,
+    status:v=>v===0?'green':v===1?'amber':'red',
+    greenLabel:'Cutting — Monetary tailwind confirmed',
+    amberLabel:'Paused — Watch for pivot signals',
+    redLabel:'Hiking — Headwind for growth assets',
+    link:'https://www.federalreserve.gov/monetarypolicy/openmarket.htm', linkLabel:'FederalReserve.gov → FOMC', defaultVal:1 },
+  { id:'earnings', label:'Earnings Revisions', weight:5, type:'toggle3', options:['Stabilising','Mixed','Falling'], values:[0,1,2],
+    desc:'Direction of S&P 500 forward earnings estimates. Stabilising = fundamental floor forming. Still falling = more price downside likely.',
+    score:v=>v===0?100:v===1?40:0,
+    status:v=>v===0?'green':v===1?'amber':'red',
+    greenLabel:'Stabilising — Fundamental floor forming',
+    amberLabel:'Mixed — Too early to call',
+    redLabel:'Still falling — More downside likely',
+    link:'https://insight.factset.com/hubfs/resources/Research%20Desk/Earnings%20Insight/EarningsInsight_052325.pdf', linkLabel:'FactSet Earnings Insight', defaultVal:2 },
+  { id:'geopolitical', label:'Active Conflict Theatres', weight:3, type:'slider', min:0, max:5, step:1, unit:'',
+    fmt:v=>`${Math.round(v)}`,
+    desc:'Number of simultaneous major geopolitical flashpoints. Count: Ukraine, Middle East, Taiwan, Sahel, South China Sea.',
+    score:v=>v<=1?100:v===2?50:v===3?20:0,
+    status:v=>v<=1?'green':v===2?'amber':'red',
+    greenLabel:'0–1 — Geopolitical risk contained',
+    amberLabel:'2 — Elevated, manageable',
+    redLabel:'≥3 — Scenario A–D multi-theatre stress',
+    link:null, defaultVal:3 },
+  { id:'audusd', label:'AUD/USD Trend', weight:7, type:'toggle3', options:['Falling','Flat','Rising'], values:[0,1,2],
+    desc:'AUD/USD direction over past 2–4 weeks. Australia-specific: a FALLING AUD at rotation point is a green signal — your unhedged international holdings recover in AUD terms as the dollar rebounds. A rising AUD during a crash is unusual and warrants caution.',
+    score:v=>v===0?100:v===1?50:20,
+    status:v=>v===0?'green':v===1?'amber':'red',
+    greenLabel:'Falling — AUD weak, unhedged int\'l gains amplified on recovery',
+    amberLabel:'Flat — Neutral AUD signal',
+    redLabel:'Rising — Unusual in a crash; check if AUD strength is structural',
+    link:'https://finance.yahoo.com/quote/AUDUSD=X/', linkLabel:'Yahoo Finance → AUD/USD', defaultVal:1 },
+];
+
+// ═══ STATE ═══
+let vals = {};
+function loadState() {
+  try { const s=JSON.parse(localStorage.getItem('spx_v6')||'{}'); vals=s.vals||{}; } catch(e) {}
+  INDS.forEach(i=>{ if(vals[i.id]===undefined) vals[i.id]=i.defaultVal; });
+}
+function saveState() {
+  try { localStorage.setItem('spx_v6', JSON.stringify({vals, ts:Date.now()})); } catch(e) {}
+}
+
+// ═══ STRATEGY RECOMMENDATIONS ═══
+// Allocation framework based on Scenario A–D macro analysis
+// Current position: 60% Balanced Indexed / 40% Cash
+// Options: High Growth Indexed (90%), Balanced Indexed (75%),
+//          Conservative Balanced Indexed (59%), Cash (0% growth)
+
+const CURRENT = {
+  'High Growth Indexed': 0,
+  'Balanced Indexed': 60,
+  'Cons. Balanced Indexed': 0,
+  'Cash': 40,
+};
+
+const STRATEGIES = {
+  rotate: {
+    label: 'ROTATE NOW', color: '#00ff87', cls: 'rotate',
+    rationale: 'Full rotation into growth assets. All conditions met — panic levels, deep discount, inflation controlled, Fed cutting. Maximum historical recovery probability from this position.',
+    alloc: { 'High Growth Indexed': 60, 'Balanced Indexed': 30, 'Cons. Balanced Indexed': 0, 'Cash': 10 },
+    action: [
+      'Log in to Member Online → login.aware.com.au',
+      'Go to Investments → Change investment options',
+      'Reduce Cash from 40% → 10%',
+      'Reduce Balanced Indexed from 60% → 30%',
+      'Add High Growth Indexed at 60%',
+      'Confirm switch — effective next business day',
+    ],
+    scColor: '#00ff87',
+  },
+  prepare: {
+    label: 'PREPARE — PARTIAL ROTATION', color: '#ffd93d', cls: 'prepare',
+    rationale: 'Core price trigger met but secondary conditions not fully aligned. Pre-position partially into growth now — reduces timing risk while maintaining protection if conditions deteriorate.',
+    alloc: { 'High Growth Indexed': 20, 'Balanced Indexed': 60, 'Cons. Balanced Indexed': 0, 'Cash': 20 },
+    action: [
+      'Log in to Member Online → login.aware.com.au',
+      'Go to Investments → Change investment options',
+      'Reduce Cash from 40% → 20%',
+      'Add High Growth Indexed at 20%',
+      'Keep Balanced Indexed at 60%',
+      'Monitor daily — prepare to execute full rotation',
+    ],
+    scColor: '#ffd93d',
+  },
+  monitor: {
+    label: 'MONITOR — REDUCE CASH DRAG', color: '#ff9500', cls: 'monitor',
+    rationale: 'Conditions developing but not confirmed. Current cash position losing ~2–3% real per year. Consider shifting some cash into Conservative Balanced Indexed to reduce drag while maintaining downside protection.',
+    alloc: { 'High Growth Indexed': 0, 'Balanced Indexed': 60, 'Cons. Balanced Indexed': 20, 'Cash': 20 },
+    action: [
+      'Optional only — not a required action',
+      'If cash drag concern: reduce Cash 40% → 20%',
+      'Redirect 20% to Conservative Balanced Indexed',
+      'Keep Balanced Indexed at 60%',
+      'Check indicators weekly — do not move to growth yet',
+    ],
+    scColor: '#ff9500',
+  },
+  hold: {
+    label: 'HOLD — MAINTAIN CURRENT', color: '#ff453a', cls: 'hold',
+    rationale: 'Insufficient conditions for rotation. Your 60/40 Balanced Indexed/Cash split is correct for this environment. The real loss from cash (~2–3%/yr) is the cost of discipline — far less than rotating into a declining market.',
+    alloc: { 'High Growth Indexed': 0, 'Balanced Indexed': 60, 'Cons. Balanced Indexed': 0, 'Cash': 40 },
+    action: [
+      'No action required',
+      'Maintain 60% Balanced Indexed / 40% Cash',
+      'Update indicators monthly or when markets move >5%',
+      'The hard gate (SPX <20% down) must clear before acting',
+    ],
+    scColor: '#ff453a',
+  },
+};
+
+function getStrategyKey(sc) {
+  const spxOk = vals.spxDrop >= 20, infOk = vals.inflation <= 6, vixOk = vals.vix >= 30;
+  if (sc >= 75 && spxOk && infOk && vixOk) return 'rotate';
+  if (sc >= 55 && spxOk) return 'prepare';
+  if (sc >= 35) return 'monitor';
+  return 'hold';
+}
+
+function renderStrategy() {
+  const sc = score();
+  const key = getStrategyKey(sc);
+  const s = STRATEGIES[key];
+  const el = document.getElementById('strategyCard');
+  if (!el) return;
+
+  // Build allocation rows
+  const funds = Object.keys(s.alloc);
+  const rows = funds.map(f => {
+    const target = s.alloc[f];
+    const current = CURRENT[f] || 0;
+    const shift = target - current;
+    const shiftStr = shift === 0 ? '—' : (shift > 0 ? `+${shift}%` : `${shift}%`);
+    const shiftColor = shift > 0 ? '#00ff87' : shift < 0 ? '#ff453a' : 'rgba(255,255,255,.3)';
+    const isCurrent = current > 0;
+    const isTarget = target > 0;
+    const nameTag = isCurrent && isTarget ? '' : isCurrent ? ' ↓' : isTarget ? ' ↑' : '';
+    return `<tr>
+      <td class="fund-name">${f}${nameTag}</td>
+      <td style="text-align:right;font-size:10px;color:rgba(255,255,255,.4)">${current}%</td>
+      <td class="fund-pct" style="color:${s.color}">${target}%</td>
+      <td class="fund-shift" style="color:${shiftColor}">${shiftStr}</td>
+    </tr>`;
+  }).join('');
+
+  // Build action steps
+  const steps = s.action.map((a, i) =>
+    `<div class="action-step"><span class="action-num">${i+1}.</span><span>${a}</span></div>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="strat-card ${s.cls}" style="--sc-color:${s.scColor}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:9px;letter-spacing:.2em;color:var(--muted)">RECOMMENDED STRATEGY</div>
+        <div style="font-size:10px;font-weight:700;color:${s.color}">SCORE ${sc}/100</div>
+      </div>
+      <div class="strat-verdict" style="color:${s.color}">${s.label}</div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:14px">${s.rationale}</div>
+
+      <table class="alloc-table">
+        <thead><tr>
+          <th>FUND</th>
+          <th style="text-align:right">NOW</th>
+          <th style="text-align:right">TARGET</th>
+          <th style="text-align:right">SHIFT</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="action-box">
+        <div class="action-title">HOW TO SWITCH — AWARE SUPER MEMBER ONLINE</div>
+        ${steps}
+      </div>
+    </div>`;
+}
+
+
+
+// ═══ LIVE DATA FETCH ═══
+// Reads data.json from same GitHub Pages origin — updated daily by GitHub Actions.
+// Falls back to Alpha Vantage direct fetch if data.json is stale or unavailable.
+
+async function fetchLatestData() {
+  const btn = document.getElementById('refreshBtn');
+  const statusEl = document.getElementById('lastUpdate');
+  btn.textContent = '⟳ FETCHING...';
+  btn.style.opacity = '0.5';
+  btn.disabled = true;
+  statusEl.textContent = 'Loading latest data...';
+  statusEl.style.color = 'rgba(255,255,255,.35)';
+
+  let d = null;
+  let source = '';
+
+  // ── Primary: read data.json from same origin (GitHub Pages) ──────────────
+  try {
+    const r = await fetch('data.json?t=' + Date.now(), { signal: AbortSignal.timeout(8000) });
+    if (r.ok) {
+      d = await r.json();
+      // Check if data is fresh (within 3 days — weekends have no market data)
+      if (d.fetchedDate) {
+        const fetched = new Date(d.fetchedDate);
+        const now = new Date();
+        const ageMs = now.getTime() - fetched.getTime();
+        const ageDays = ageMs / (1000 * 60 * 60 * 24);
+        // Allow up to 4 days — covers weekends (Fri data valid Mon morning)
+        // Only flag stale if > 4 calendar days old
+        if (ageDays > 4) {
+          d._stale = true;
+          d._agedays = Math.round(ageDays);
+        }
+      }
+      source = 'data.json';
+    }
+  } catch(e) {
+    console.log('data.json fetch failed:', e.message);
+  }
+
+  // ── Fallback: direct Alpha Vantage if data.json unavailable ──────────────
+  if (!d) {
+    const avKey = localStorage.getItem('av_api_key') || '';
+    if (avKey) {
+      try {
+        const [spyR, vixR, audR] = await Promise.allSettled([
+          fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SPY&apikey=${avKey}`,
+                { signal: AbortSignal.timeout(10000) }),
+          fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=VIX&apikey=${avKey}`,
+                { signal: AbortSignal.timeout(10000) }),
+          fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(8000) }),
+        ]);
+
+        d = { errors: [] };
+
+        if (spyR.status === 'fulfilled' && spyR.value.ok) {
+          const q = (await spyR.value.json())['Global Quote'] || {};
+          if (q['05. price']) {
+            const cur = parseFloat(q['05. price']);
+            const storedATH = parseFloat(localStorage.getItem('spy_ath') || '0');
+            const ath = Math.max(storedATH, cur);
+            localStorage.setItem('spy_ath', ath.toString());
+            d.spxCurrent = cur; d.spxATH = ath;
+            d.spxDrop = Math.max(0, (ath - cur) / ath * 100);
+          }
+        }
+        if (vixR.status === 'fulfilled' && vixR.value.ok) {
+          const q = (await vixR.value.json())['Global Quote'] || {};
+          if (q['05. price']) d.vix = parseFloat(q['05. price']);
+        }
+        if (audR.status === 'fulfilled' && audR.value.ok) {
+          const fx = await audR.value.json();
+          if (fx.rates?.AUD) {
+            const cur = 1 / fx.rates.AUD;
+            const last = parseFloat(localStorage.getItem('last_audusd') || '0');
+            d.audusdRate = parseFloat(cur.toFixed(4));
+            if (last > 0) {
+              const chg = (cur - last) / last * 100;
+              d.audusd = chg > 0.5 ? 2 : chg < -0.5 ? 0 : 1;
+            }
+            localStorage.setItem('last_audusd', cur.toFixed(4));
+          }
+        }
+        source = 'Alpha Vantage';
+      } catch(e) { console.log('AV fallback failed:', e.message); }
+    }
+  }
+
+  // ── Apply data to indicators ──────────────────────────────────────────────
+  if (!d) {
+    resetToCurrentData();
+    statusEl.textContent = 'Could not fetch — showing last known data';
+    statusEl.style.color = '#ffd93d';
+    showBanner('warn', 'Could not fetch live data. Are you running locally from a file:// URL? Host on GitHub Pages for automatic daily updates. Showing last known data.');
+    btn.textContent = '⟳ REFRESH'; btn.style.opacity = '1'; btn.disabled = false;
+    return;
+  }
+
+  const MAP = {
+    spxDrop:'spxDrop', vix:'vix', creditSpread:'creditSpread',
+    inflation:'inflation', treasuryTrend:'treasuryTrend', fedPolicy:'fedPolicy',
+    earnings:'earnings', geopolitical:'geopolitical', audusd:'audusd'
+  };
+  let updated = 0;
+  Object.entries(MAP).forEach(([key, id]) => {
+    if (d[key] !== null && d[key] !== undefined) {
+      vals[id] = parseFloat(d[key]);
+      renderCard(INDS.find(i=>i.id===id));
+      updated++;
+    }
+  });
+
+  saveState();
+  updateScore();
+
+  // ── Status + banner ───────────────────────────────────────────────────────
+  const dateStr = d.fetchedAt || d.fetchedDate || 'unknown';
+  const parts = [
+    d.spxCurrent ? `SPY $${parseFloat(d.spxCurrent).toFixed(2)} (-${parseFloat(d.spxDrop||0).toFixed(1)}%)` : '',
+    d.vix        ? `VIX ${parseFloat(d.vix).toFixed(1)}` : '',
+    d.audusdRate ? `AUD/USD ${d.audusdRate}` : '',
+    d.treasuryYield ? `10Y ${d.treasuryYield}%` : '',
+    d.inflation  ? `CPI ${d.inflation}%` : '',
+  ].filter(Boolean).join(' · ');
+
+  if (d._stale) {
+    statusEl.textContent = `Data from ${d.fetchedDate} (${d._agedays}d ago) · ${parts}`;
+    statusEl.style.color = '#ffd93d';
+    showBanner('warn', `Data is ${d._agedays} days old (${d.fetchedDate}). GitHub Actions may not have run. Go to your GitHub repo → Actions tab → run "Fetch Market Data" manually. ${parts}`);
+  } else {
+    statusEl.textContent = `${dateStr} · ${parts}`;
+    statusEl.style.color = '#00ff87';
+    const spxColor = parseFloat(d.spxDrop||0)>=20?'#00ff87':parseFloat(d.spxDrop||0)>=10?'#ffd93d':'#ff453a';
+    const vixColor = parseFloat(d.vix||0)>=40?'#00ff87':parseFloat(d.vix||0)>=30?'#ffd93d':'#ff453a';
+    showBanner('ok',
+      `<strong style="color:#00ff87">⟳ ${dateStr}</strong> · source: ${source}<br>` +
+      (d.spxCurrent ? `SPY <strong>$${parseFloat(d.spxCurrent).toFixed(2)}</strong> <strong style="color:${spxColor}">-${parseFloat(d.spxDrop||0).toFixed(1)}%</strong> from ATH · ` : '') +
+      (d.vix ? `VIX <strong style="color:${vixColor}">${parseFloat(d.vix).toFixed(1)}</strong> · ` : '') +
+      (d.audusdRate ? `AUD/USD <strong>${d.audusdRate}</strong> · ` : '') +
+      (d.treasuryYield ? `10Y <strong>${d.treasuryYield}%</strong> · ` : '') +
+      (d.inflation ? `CPI <strong>${d.inflation}%</strong>` : '') +
+      `<br><span style="color:rgba(255,255,255,.3);font-size:9px">` +
+      (d.earnings !== null ? '' : 'Earnings & Geopolitical: adjust manually in Indicators tab') +
+      `</span>`
+    );
+  }
+
+  btn.textContent = '⟳ REFRESH'; btn.style.opacity = '1'; btn.disabled = false;
+}
+
+function showBanner(type, html) {
+  const banner = document.getElementById('liveBanner');
+  if (!banner) return;
+  banner.style.display = 'block';
+  banner.style.borderColor = type === 'ok' ? 'rgba(0,255,135,.2)' : 'rgba(255,217,61,.2)';
+  banner.innerHTML = html;
+}
+
+// ═══ CURRENT MARKET DATA (updated May 25, 2026) ═══
+// SPX: 7,473 (ATH: 7,517 May 14) = -0.6% from peak
+// VIX: 16.7 | 10Y Treasury: 4.57% (RISING) | CPI: 2.4%
+// Fed: Paused at 3.75% | AUD/USD: ~0.635 (rising from lows)
+// HY Spread: ~310bps (calm) | Geopolitical: 3 theatres active
+const CURRENT_DATA = {
+  spxDrop:      0.65,  // SPX 7,473 vs ATH 7,522 (May 26, 2026)
+  vix:          16.59, // VIX May 22 close
+  creditSpread: 310,   // calm credit market
+  inflation:    2.4,   // US CPI Feb 2026
+  treasuryTrend:2,     // Rising (4.29%→4.51% past month)
+  fedPolicy:    1,     // Paused at 3.75%
+  earnings:     1,     // Mixed
+  geopolitical: 3,     // Ukraine, Middle East, Taiwan
+  audusd:       2,     // Rising (AUD 0.7173)
+};
+
+const DATA_NOTES = {
+  spxDrop:      'SPX 7,473 vs new ATH 7,522 (May 26, 2026). Only 0.65% from peak.',
+  vix:          'VIX 16.59 — calm, no fear. Market complacent.',
+  creditSpread: '~310bps estimate — calm credit market.',
+  inflation:    'US CPI 2.4% (Feb 2026). Under control.',
+  treasuryTrend:'10Y yield 4.506% — rising trend over past month (from 4.29%).',
+  fedPolicy:    'Fed paused at 3.75%. No cut expected near term.',
+  earnings:     'Q1 strong, but forward estimates mixed amid tariff uncertainty.',
+  geopolitical: '3 active theatres: Ukraine, Middle East, Taiwan tension.',
+  audusd:       'AUD/USD 0.7173 (May 25) — strongly rising from 0.6471 Nov low.',
+};
+
+function resetOne(id) {
+  vals[id] = CURRENT_DATA[id];
+  renderCard(INDS.find(i=>i.id===id));
+  showDataNote(id);
+}
+
+function resetToCurrentData() {
+  Object.assign(vals, CURRENT_DATA);
+  INDS.forEach(ind => renderCard(ind));
+  // Show the data banner
+  const banner = document.getElementById('currentDataBanner');
+  const lines = Object.entries(DATA_NOTES).map(([k,v])=>{
+    const ind = INDS.find(i=>i.id===k);
+    return `<span style="color:rgba(255,255,255,.5)">${ind?ind.label:k}:</span> ${v}`;
+  }).join('<br>');
+  banner.innerHTML = '<strong style="color:rgba(0,255,135,.9)">⟳ Reset to current market data (May 25, 2026)</strong><br><br>' + lines;
+  banner.style.display = 'block';
+}
+
+function showDataNote(id) {
+  const banner = document.getElementById('currentDataBanner');
+  const ind = INDS.find(i=>i.id===id);
+  banner.innerHTML = `<strong style="color:rgba(0,255,135,.9)">⟳ ${ind?ind.label:id} reset</strong> — ${DATA_NOTES[id]}`;
+  banner.style.display = 'block';
+}
+
+// ═══ SCORING ═══
+const CIRC=2*Math.PI*44;
+const COLS={green:'#00ff87',amber:'#ffd93d',red:'#ff453a'};
+
+function score() {
+  let t=0,w=0;
+  INDS.forEach(i=>{ t+=i.score(vals[i.id])*i.weight; w+=i.weight; });
+  return Math.round(t/w);
+}
+
+function verdict(sc) {
+  const spxOk=vals.spxDrop>=20, infOk=vals.inflation<=6, vixOk=vals.vix>=30;
+  if(sc>=75&&spxOk&&infOk&&vixOk) return {cls:'rotate',color:'#00ff87',label:'ROTATE NOW',sub:'All primary conditions met — execute rotation'};
+  if(sc>=55&&spxOk) return {cls:'prepare',color:'#ffd93d',label:'PREPARE TO ROTATE',sub:'Core trigger met — watch secondary indicators'};
+  if(sc>=35) return {cls:'monitor',color:'#ff9500',label:'MONITOR CLOSELY',sub:'Conditions developing — check weekly'};
+  return {cls:'hold',color:'#ff453a',label:'HOLD CASH',sub:'Insufficient conditions — preserve optionality'};
+}
+
+function updateScore() {
+  const sc=score(), v=verdict(sc);
+  // Gauge
+  document.getElementById('gaugeFill').style.strokeDashoffset=CIRC-(sc/100)*CIRC;
+  document.getElementById('gaugeFill').style.stroke=v.color;
+  document.getElementById('gaugeNum').textContent=sc;
+  document.getElementById('gaugeNum').style.color=v.color;
+  // Verdict
+  document.getElementById('verdictMain').textContent=v.label;
+  document.getElementById('verdictMain').style.color=v.color;
+  document.getElementById('verdictSub').textContent=v.sub;
+  document.getElementById('scoreCard').className='score-card '+v.cls;
+  // Bar
+  document.getElementById('scoreBarFill').style.width=sc+'%';
+  // Traffic
+  const cnt={green:0,amber:0,red:0};
+  INDS.forEach(i=>cnt[i.status(vals[i.id])]++);
+  document.getElementById('tGreen').textContent=cnt.green;
+  document.getElementById('tAmber').textContent=cnt.amber;
+  document.getElementById('tRed').textContent=cnt.red;
+  // Gate
+  const gates=[];
+  if(vals.spxDrop<20) gates.push(`SPX only -${vals.spxDrop.toFixed(1)}% (need ≥20%)`);
+  if(vals.inflation>6) gates.push(`CPI at ${vals.inflation.toFixed(1)}% (need ≤6%)`);
+  const gw=document.getElementById('gateWarn');
+  if(gates.length){ gw.style.display='block'; document.getElementById('gateText').textContent=gates.join(' · '); }
+  else gw.style.display='none';
+  // Summary
+  const sg=document.getElementById('summaryGrid');
+  const items=[
+    {label:'SPX drawdown',id:'spxDrop',fmt:i=>`-${vals[i].toFixed(1)}%`},
+    {label:'VIX',id:'vix',fmt:i=>`${vals[i].toFixed(0)}`},
+    {label:'HY Spread',id:'creditSpread',fmt:i=>`${Math.round(vals[i])}bps`},
+    {label:'CPI inflation',id:'inflation',fmt:i=>`${vals[i].toFixed(1)}%`},
+    {label:'10Y Treasury',id:'treasuryTrend',fmt:i=>['Falling','Flat','Rising'][vals[i]]},
+    {label:'Fed policy',id:'fedPolicy',fmt:i=>['Cutting','Paused','Hiking'][vals[i]]},
+    {label:'AUD/USD',id:'audusd',fmt:i=>['Falling','Flat','Rising'][vals[i]]},
+    {label:'Geopolitical',id:'geopolitical',fmt:i=>`${Math.round(vals[i])} theatres`},
+  ];
+  sg.innerHTML=items.map(it=>{
+    const ind=INDS.find(x=>x.id===it.id);
+    const s=ind.status(vals[it.id]);
+    return `<div class="summary-item">${it.label}<div class="summary-val" style="color:${COLS[s]}">${it.fmt(it.id)}</div></div>`;
+  }).join('');
+  // Notifications
+  checkNotifs(sc);
+  // Strategy
+  renderStrategy();
+  // Timestamp
+  const now=new Date();
+  document.getElementById('lastUpdate').textContent='Updated '+now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+' AEST';
+}
+
+// ═══ NOTIFICATIONS ═══
+let prevScore=null;
+function checkNotifs(sc) {
+  if(prevScore===null){prevScore=sc;return;}
+  const gateClear=vals.spxDrop>=20&&vals.inflation<=6;
+  if(sc>=75&&prevScore<75) notify('🟢 ROTATE NOW',`Score reached ${sc}/100. All conditions met.`);
+  else if(sc>=55&&prevScore<55) notify('🟡 PREPARE TO ROTATE',`Score reached ${sc}/100. Core trigger met.`);
+  prevScore=sc;
+}
+function notify(title,body) {
+  document.getElementById('nbTitle').textContent=title;
+  document.getElementById('nbBody').textContent=body;
+  const nb=document.getElementById('nb');
+  nb.classList.add('show');
+  setTimeout(()=>nb.classList.remove('show'),6000);
+  if('Notification'in window&&Notification.permission==='granted')
+    new Notification(title,{body,icon:'icon-192.png'});
+}
+
+// ═══ INDICATOR CARDS ═══
+function buildCards() {
+  const c=document.getElementById('indicatorCards');
+  c.innerHTML='';
+  INDS.forEach(ind=>{ const d=document.createElement('div'); d.id='ic_'+ind.id; c.appendChild(d); renderCard(ind); });
+}
+
+function renderCard(ind) {
+  const el=document.getElementById('ic_'+ind.id);
+  if(!el)return;
+  const v=vals[ind.id], s=ind.status(v), sc=ind.score(v), col=COLS[s];
+  el.className='ind-card'; el.style.setProperty('--ic',col);
+  const dispVal=ind.type==='slider'?ind.fmt(v):ind.options[ind.values.indexOf(v)];
+  const statusLabel=s==='green'?ind.greenLabel:s==='amber'?ind.amberLabel:ind.redLabel;
+  let ctrl='';
+  if(ind.type==='slider'){
+    ctrl=`<input type="range" min="${ind.min}" max="${ind.max}" step="${ind.step}" value="${v}"
+      oninput="onSlide('${ind.id}',this.value)"/>
+      <div class="slider-ends"><span>${ind.min}${ind.unit}</span><span>${ind.max}${ind.unit}</span></div>`;
+  } else {
+    const ac=['ag','aa','ar'];
+    ctrl=`<div class="toggle3">${ind.options.map((o,i)=>`<button class="t3-btn${v===ind.values[i]?' '+ac[i]:''}" onclick="onToggle('${ind.id}',${ind.values[i]})">${o}</button>`).join('')}</div>`;
+  }
+  const isModified = vals[ind.id] !== ind.defaultVal;
+  const resetBtn = `<button onclick="resetOne('${ind.id}')" style="background:none;border:none;color:rgba(0,255,135,.5);font-size:9px;font-family:'IBM Plex Mono',monospace;cursor:pointer;letter-spacing:.06em;padding:0" title="Reset to current data">⟳ reset</button>`;
+  const linkHtml=ind.link?`<a class="ind-source-link" href="${ind.link}" target="_blank">${ind.linkLabel}</a> ${isModified ? resetBtn : ''}`
+    :`<span class="ind-source-hint">Manual assessment</span> ${isModified ? resetBtn : ''}`;
+  el.innerHTML=`
+    <div class="ind-header">
+      <div class="ind-title-row"><div class="dot ${s}"></div><div class="ind-title">${ind.label}</div></div>
+      <div class="ind-value">${dispVal}</div>
+    </div>
+    <div class="ind-desc">${ind.desc}</div>
+    <div class="ind-source-row">${linkHtml}</div>
+    ${ctrl}
+    <div class="ind-status"><div class="dot ${s}"></div>${statusLabel}</div>
+    <div class="ind-score-row">
+      <div class="ind-score-track"><div class="ind-score-fill" style="width:${sc}%"></div></div>
+      <div class="ind-score-num">${sc}/100</div>
+    </div>`;
+}
+
+function onSlide(id,v){ vals[id]=parseFloat(v); renderCard(INDS.find(i=>i.id===id)); }
+function onToggle(id,v){ vals[id]=v; renderCard(INDS.find(i=>i.id===id)); }
+
+// ═══ SETTINGS FUNCTIONS ═══
+function saveAVKey() {
+  const key = document.getElementById('avKeyInput').value.trim();
+  if (key.length < 5) { alert('Key too short — check your Alpha Vantage key'); return; }
+  localStorage.setItem('av_api_key', key);
+  const st = document.getElementById('avKeyStatus');
+  st.textContent = `✓ Key saved (${key.slice(0,6)}...) — tap ⟳ REFRESH to load live data`;
+  st.style.color = 'var(--green)';
+  st.className = 'key-status ok';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('fredKeyInput') ? document.getElementById('fredKeyInput').value.trim() : '';
+  if (key.length < 10) { alert('Key too short — check your FRED API key'); return; }
+  localStorage.setItem('fred_api_key', key);
+  const st = document.getElementById('keyStatus');
+  if (st) { st.textContent = `✓ Key saved (${key.slice(0,6)}...)`; st.style.color = 'var(--green)'; st.className = 'key-status ok'; }
+  alert('FRED key saved.');
+}
+
+function loadApiKeyStatus() {
+  // Alpha Vantage
+  const avKey = localStorage.getItem('av_api_key') || '';
+  const avEl = document.getElementById('avKeyInput');
+  const avSt = document.getElementById('avKeyStatus');
+  if (avKey && avEl) {
+    avEl.value = avKey;
+    avSt.textContent = `✓ Key configured (${avKey.slice(0,6)}...) — tap ⟳ REFRESH to load live data`;
+    avSt.style.color = 'var(--green)';
+    avSt.className = 'key-status ok';
+  }
+  // FRED (legacy)
+  const fredKey = localStorage.getItem('fred_api_key') || '';
+  const fredEl = document.getElementById('fredKeyInput');
+  const fredSt = document.getElementById('keyStatus');
+  if (fredKey && fredEl) {
+    fredEl.value = fredKey;
+    if (fredSt) { fredSt.textContent = `✓ Key configured (${fredKey.slice(0,6)}...)`; fredSt.style.color = 'var(--green)'; fredSt.className = 'key-status ok'; }
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem('spx_settings', JSON.stringify({
+      notifPrepare: document.getElementById('notifPrepare') ? document.getElementById('notifPrepare').checked : true,
+      notifRotate:  document.getElementById('notifRotate')  ? document.getElementById('notifRotate').checked  : true,
+    }));
+  } catch(e) {}
+}
+
+function requestNotifPermission() {
+  if (!('Notification' in window)) { alert('Notifications not supported in this browser.'); return; }
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') {
+      new Notification('SPX Rotate — Notifications Active', { body: 'You will be alerted when rotation conditions change.', icon: 'icon-192.png' });
+      alert('✅ Notifications enabled!');
+    } else {
+      alert('Notifications blocked. Enable in Chrome → Settings → Site Settings → Notifications.');
+    }
+  });
+}
+
+function clearOverrides() {
+  INDS.forEach(ind => { vals[ind.id] = ind.defaultVal; });
+  INDS.forEach(ind => renderCard(ind));
+  saveState();
+  alert('Reset to default values.');
+}
+
+function saveAndScore() {
+  saveState();
+  updateScore();
+  showTab('score');
+}
+
+// ═══ TABS ═══
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
+  const nb=document.getElementById('nav-'+name); if(nb)nb.classList.add('active');
+}
+
+// ═══ INIT ═══
+function init() {
+  loadState();
+  buildCards();
+  updateScore();
+  if('serviceWorker'in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+init();
+</script>
+</body>
+</html>
