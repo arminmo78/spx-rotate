@@ -257,9 +257,9 @@
 
   <!-- Where to find data -->
   <div class="find-card">
-    <div class="find-title">CURRENT READINGS — MAY 25, 2026</div>
+    <div class="find-title">CURRENT READINGS — MAY 27, 2026</div>
     <div style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.7">
-      SPX <strong style="color:var(--red)">7,473</strong> (new ATH 7,522, only <strong style="color:var(--red)">-0.65%</strong> below peak) ·
+      SPX <strong style="color:var(--red)">7,473</strong> (ATH 7,522, only <strong style="color:var(--red)">-0.65%</strong> below peak) ·
       VIX <strong style="color:var(--red)">16.6</strong> ·
       10Y Yield <strong style="color:var(--amber)">4.51% ↑ Rising</strong> ·
       CPI <strong style="color:var(--green)">2.4%</strong> ·
@@ -873,6 +873,13 @@ async function fetchLatestData() {
     return;
   }
 
+  // Clear any stale ATH stored in localStorage — always use data.json value
+  if (d.spxATH) {
+    localStorage.removeItem('spy_ath');
+    localStorage.removeItem('spx_ath');
+    localStorage.removeItem('spx_ath_known');
+  }
+
   const MAP = {
     spxDrop:'spxDrop', vix:'vix', creditSpread:'creditSpread',
     inflation:'inflation', treasuryTrend:'treasuryTrend', fedPolicy:'fedPolicy',
@@ -933,13 +940,13 @@ function showBanner(type, html) {
   banner.innerHTML = html;
 }
 
-// ═══ CURRENT MARKET DATA (updated May 25, 2026) ═══
+// ═══ CURRENT MARKET DATA (updated May 27, 2026) ═══
 // SPX: 7,473 (ATH: 7,517 May 14) = -0.6% from peak
 // VIX: 16.7 | 10Y Treasury: 4.57% (RISING) | CPI: 2.4%
 // Fed: Paused at 3.75% | AUD/USD: ~0.635 (rising from lows)
 // HY Spread: ~310bps (calm) | Geopolitical: 3 theatres active
 const CURRENT_DATA = {
-  spxDrop:      0.65,  // SPX 7,473 vs ATH 7,522 (May 26, 2026)
+  spxDrop:      0.65,  // SPX 7,473 vs ATH 7,522 (May 27, 2026)
   vix:          16.59, // VIX May 22 close
   creditSpread: 310,   // calm credit market
   inflation:    2.4,   // US CPI Feb 2026
@@ -951,7 +958,7 @@ const CURRENT_DATA = {
 };
 
 const DATA_NOTES = {
-  spxDrop:      'SPX 7,473 vs new ATH 7,522 (May 26, 2026). Only 0.65% from peak.',
+  spxDrop:      'SPX 7,473 vs new ATH 7,522 (May 27, 2026). Only 0.65% from peak.',
   vix:          'VIX 16.59 — calm, no fear. Market complacent.',
   creditSpread: '~310bps estimate — calm credit market.',
   inflation:    'US CPI 2.4% (Feb 2026). Under control.',
@@ -977,7 +984,7 @@ function resetToCurrentData() {
     const ind = INDS.find(i=>i.id===k);
     return `<span style="color:rgba(255,255,255,.5)">${ind?ind.label:k}:</span> ${v}`;
   }).join('<br>');
-  banner.innerHTML = '<strong style="color:rgba(0,255,135,.9)">⟳ Reset to current market data (May 25, 2026)</strong><br><br>' + lines;
+  banner.innerHTML = '<strong style="color:rgba(0,255,135,.9)">⟳ Reset to current market data (May 27, 2026)</strong><br><br>' + lines;
   banner.style.display = 'block';
 }
 

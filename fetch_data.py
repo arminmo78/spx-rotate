@@ -2,234 +2,161 @@
 """
 SPX Rotation Calculator — Market Data Fetcher
 Runs daily via GitHub Actions. Writes data.json to repository root.
-APIs used (all free):
-  - Alpha Vantage: SPY price, VIX (free key, 25 calls/day)
-  - FRED: CPI, 10Y Treasury, HY Spread, Fed Funds (free key)
+APIs:
+  - FRED: SP500 (actual SPX values), VIXCLS, CPIAUCSL, DGS10, BAMLH0A0HYM2, FEDFUNDS
   - open.er-api.com: AUD/USD (no key needed)
+  - Alpha Vantage: NOT used for SPX (FRED is more reliable and uses actual SPX values)
 """
 
-import os
-import json
-import requests
+import os, json, requests
 from datetime import datetime, timedelta, timezone
 
-AV_KEY   = os.environ.get('AV_API_KEY', '')
 FRED_KEY = os.environ.get('FRED_API_KEY', '')
-
-SYDNEY_OFFSET = timezone(timedelta(hours=10))  # AEST
-now_sydney = datetime.now(SYDNEY_OFFSET)
+SYDNEY   = timezone(timedelta(hours=10))
+now      = datetime.now(SYDNEY)
 
 result = {
-    "fetchedAt": now_sydney.strftime("%Y-%m-%d %H:%M AEST"),
-    "fetchedDate": now_sydney.strftime("%Y-%m-%d"),
+    "fetchedAt":    now.strftime("%Y-%m-%d %H:%M AEST"),
+    "fetchedDate":  now.strftime("%Y-%m-%d"),
     "errors": [],
-    # Indicator values (app-ready)
-    "spxDrop":       None,   # % below ATH, positive number
-    "spxCurrent":    None,   # current SPY price
-    "spxATH":        None,   # all-time high SPY
-    "vix":           None,   # VIX level
-    "creditSpread":  None,   # HY OAS in bps
-    "inflation":     None,   # US CPI YoY %
-    "treasuryTrend": None,   # 0=Falling, 1=Flat, 2=Rising
-    "treasuryYield": None,   # 10Y yield %
-    "fedPolicy":     None,   # 0=Cutting, 1=Paused, 2=Hiking
-    "fedRate":       None,   # Fed funds rate %
-    "earnings":      None,   # 0=Stabilising, 1=Mixed, 2=Falling (manual - not auto-fetched)
-    "geopolitical":  None,   # count (manual - not auto-fetched)
-    "audusd":        None,   # 0=Falling, 1=Flat, 2=Rising
-    "audusdRate":    None,   # AUD/USD exchange rate
+    "spxDrop":       None,
+    "spxCurrent":    None,
+    "spxATH":        None,
+    "vix":           None,
+    "creditSpread":  None,
+    "inflation":     None,
+    "treasuryTrend": None,
+    "treasuryYield": None,
+    "fedPolicy":     None,
+    "fedRate":       None,
+    "earnings":      1,    # Manual — carry over
+    "geopolitical":  3,    # Manual — carry over
+    "audusd":        None,
+    "audusdRate":    None,
 }
 
-# ── Load stored ATH from data.json (to track across runs) ──────────────────
+# Load previous data to carry over manual fields and stored ATH
 stored_ath = 0.0
 stored_aud = 0.0
 try:
     with open('data.json', 'r') as f:
         prev = json.load(f)
-        stored_ath = float(prev.get('spxATH') or 0)
-        stored_aud = float(prev.get('audusdRate') or 0)
-        # Carry over manual indicators
-        result['earnings']    = prev.get('earnings', 1)
+        stored_ath      = float(prev.get('spxATH') or 0)
+        stored_aud      = float(prev.get('audusdRate') or 0)
+        result['earnings']     = prev.get('earnings', 1)
         result['geopolitical'] = prev.get('geopolitical', 3)
 except Exception:
-    result['earnings']    = 1  # Mixed (default)
-    result['geopolitical'] = 3  # 3 theatres (default)
+    pass
 
-# ── Alpha Vantage: SPY ──────────────────────────────────────────────────────
-if AV_KEY:
+def fred_get(series_id, limit=30):
+    start = (datetime.now() - timedelta(days=max(limit*3, 400))).strftime('%Y-%m-%d')
+    end   = datetime.now().strftime('%Y-%m-%d')
+    r = requests.get('https://api.stlouisfed.org/fred/series/observations', params={
+        'series_id': series_id, 'api_key': FRED_KEY, 'file_type': 'json',
+        'sort_order': 'desc', 'observation_start': start,
+        'observation_end': end, 'limit': limit
+    }, timeout=15)
+    r.raise_for_status()
+    data = r.json()
+    if 'error_message' in data:
+        raise Exception(data['error_message'])
+    return [o for o in data.get('observations', []) if o['value'] not in ('.','')]
+
+if not FRED_KEY:
+    result['errors'].append('FRED_API_KEY not set')
+else:
+    # ── SP500 actual index values (NOT SPY ETF) ─────────────────────────────
     try:
-        r = requests.get(
-            'https://www.alphavantage.co/query',
-            params={'function': 'GLOBAL_QUOTE', 'symbol': 'SPY', 'apikey': AV_KEY},
-            timeout=15
-        )
-        q = r.json().get('Global Quote', {})
-        if q.get('05. price'):
-            current = float(q['05. price'])
-            ath = max(stored_ath, current)
+        obs = fred_get('SP500', limit=1260)  # ~5 years daily
+        if obs:
+            vals = [float(o['value']) for o in obs]
+            current = vals[0]
+            ath     = max(stored_ath, max(vals))
             result['spxCurrent'] = round(current, 2)
             result['spxATH']     = round(ath, 2)
-            drop = max(0, (ath - current) / ath * 100)
-            result['spxDrop']    = round(drop, 2)
-        elif q.get('Information'):
-            result['errors'].append('AV SPY: API call limit reached')
-        else:
-            result['errors'].append(f'AV SPY: unexpected response {list(q.keys())}')
+            result['spxDrop']    = round(max(0, (ath - current) / ath * 100), 2)
     except Exception as e:
-        result['errors'].append(f'AV SPY: {e}')
-else:
-    result['errors'].append('AV_API_KEY not set — SPY not fetched')
+        result['errors'].append(f'SP500: {e}')
 
-# ── Alpha Vantage: VIX ──────────────────────────────────────────────────────
-if AV_KEY:
+    # ── VIX ────────────────────────────────────────────────────────────────
     try:
-        r = requests.get(
-            'https://www.alphavantage.co/query',
-            params={'function': 'GLOBAL_QUOTE', 'symbol': 'VIX', 'apikey': AV_KEY},
-            timeout=15
-        )
-        q = r.json().get('Global Quote', {})
-        if q.get('05. price'):
-            result['vix'] = round(float(q['05. price']), 2)
-        elif q.get('Information'):
-            result['errors'].append('AV VIX: API call limit reached')
+        obs = fred_get('VIXCLS', limit=5)
+        if obs:
+            result['vix'] = round(float(obs[0]['value']), 2)
     except Exception as e:
-        result['errors'].append(f'AV VIX: {e}')
+        result['errors'].append(f'VIX: {e}')
 
-# ── FRED: CPI (year-over-year) ──────────────────────────────────────────────
-if FRED_KEY:
+    # ── CPI YoY ────────────────────────────────────────────────────────────
     try:
-        start = (datetime.now() - timedelta(days=400)).strftime('%Y-%m-%d')
-        r = requests.get(
-            'https://api.stlouisfed.org/fred/series/observations',
-            params={
-                'series_id': 'CPIAUCSL', 'api_key': FRED_KEY,
-                'file_type': 'json', 'sort_order': 'desc',
-                'observation_start': start, 'limit': 14
-            },
-            timeout=15
-        )
-        obs = [o for o in r.json().get('observations', []) if o['value'] not in ('.', '')]
+        obs = fred_get('CPIAUCSL', limit=14)
         if len(obs) >= 13:
             latest   = float(obs[0]['value'])
             year_ago = float(obs[12]['value'])
             result['inflation'] = round((latest - year_ago) / year_ago * 100, 2)
     except Exception as e:
-        result['errors'].append(f'FRED CPI: {e}')
-else:
-    result['errors'].append('FRED_API_KEY not set — CPI/Treasury/Spread/Fed not fetched')
+        result['errors'].append(f'CPI: {e}')
 
-# ── FRED: 10Y Treasury yield + trend ───────────────────────────────────────
-if FRED_KEY:
+    # ── 10Y Treasury ───────────────────────────────────────────────────────
     try:
-        start = (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d')
-        r = requests.get(
-            'https://api.stlouisfed.org/fred/series/observations',
-            params={
-                'series_id': 'DGS10', 'api_key': FRED_KEY,
-                'file_type': 'json', 'sort_order': 'desc',
-                'observation_start': start, 'limit': 30
-            },
-            timeout=15
-        )
-        obs = [float(o['value']) for o in r.json().get('observations', [])
-               if o['value'] not in ('.', '')]
-        if len(obs) >= 20:
-            result['treasuryYield'] = round(obs[0], 3)
-            recent = sum(obs[:5]) / 5
-            older  = sum(obs[15:20]) / 5
-            if recent > older + 0.05:
-                result['treasuryTrend'] = 2   # Rising
-            elif recent < older - 0.05:
-                result['treasuryTrend'] = 0   # Falling
-            else:
-                result['treasuryTrend'] = 1   # Flat
+        obs = fred_get('DGS10', limit=30)
+        vals = [float(o['value']) for o in obs]
+        if len(vals) >= 20:
+            result['treasuryYield'] = round(vals[0], 3)
+            recent = sum(vals[:5]) / 5
+            older  = sum(vals[15:20]) / 5
+            result['treasuryTrend'] = 2 if recent > older + 0.05 else (0 if recent < older - 0.05 else 1)
     except Exception as e:
-        result['errors'].append(f'FRED 10Y: {e}')
+        result['errors'].append(f'10Y: {e}')
 
-# ── FRED: HY Credit Spread (% → bps) ───────────────────────────────────────
-if FRED_KEY:
+    # ── HY Spread ──────────────────────────────────────────────────────────
     try:
-        start = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')
-        r = requests.get(
-            'https://api.stlouisfed.org/fred/series/observations',
-            params={
-                'series_id': 'BAMLH0A0HYM2', 'api_key': FRED_KEY,
-                'file_type': 'json', 'sort_order': 'desc',
-                'observation_start': start, 'limit': 5
-            },
-            timeout=15
-        )
-        obs = [o for o in r.json().get('observations', []) if o['value'] not in ('.', '')]
+        obs = fred_get('BAMLH0A0HYM2', limit=5)
         if obs:
             result['creditSpread'] = round(float(obs[0]['value']) * 100)
     except Exception as e:
-        result['errors'].append(f'FRED HY: {e}')
+        result['errors'].append(f'HY: {e}')
 
-# ── FRED: Fed Funds Rate + direction ────────────────────────────────────────
-if FRED_KEY:
+    # ── Fed Funds ──────────────────────────────────────────────────────────
     try:
-        start = (datetime.now() - timedelta(days=200)).strftime('%Y-%m-%d')
-        r = requests.get(
-            'https://api.stlouisfed.org/fred/series/observations',
-            params={
-                'series_id': 'FEDFUNDS', 'api_key': FRED_KEY,
-                'file_type': 'json', 'sort_order': 'desc',
-                'observation_start': start, 'limit': 6
-            },
-            timeout=15
-        )
-        obs = [o for o in r.json().get('observations', []) if o['value'] not in ('.', '')]
+        obs = fred_get('FEDFUNDS', limit=6)
         if len(obs) >= 2:
             latest = float(obs[0]['value'])
             old    = float(obs[-1]['value'])
-            result['fedRate'] = round(latest, 3)
-            if latest < old - 0.1:
-                result['fedPolicy'] = 0   # Cutting
-            elif latest > old + 0.1:
-                result['fedPolicy'] = 2   # Hiking
-            else:
-                result['fedPolicy'] = 1   # Paused
+            result['fedRate']   = round(latest, 3)
+            result['fedPolicy'] = 0 if latest < old - 0.1 else (2 if latest > old + 0.1 else 1)
     except Exception as e:
-        result['errors'].append(f'FRED Fed: {e}')
+        result['errors'].append(f'Fed: {e}')
 
-# ── AUD/USD via open.er-api.com (no key needed) ─────────────────────────────
+# ── AUD/USD ────────────────────────────────────────────────────────────────
 try:
     r = requests.get('https://open.er-api.com/v6/latest/USD', timeout=10)
     d = r.json()
     if d.get('rates', {}).get('AUD'):
-        aud_usd = round(1 / d['rates']['AUD'], 4)
-        result['audusdRate'] = aud_usd
-        # Trend vs previous run
+        aud = round(1 / d['rates']['AUD'], 4)
+        result['audusdRate'] = aud
         if stored_aud > 0:
-            change_pct = (aud_usd - stored_aud) / stored_aud * 100
-            if change_pct > 0.5:
-                result['audusd'] = 2    # Rising
-            elif change_pct < -0.5:
-                result['audusd'] = 0    # Falling
-            else:
-                result['audusd'] = 1    # Flat
+            chg = (aud - stored_aud) / stored_aud * 100
+            result['audusd'] = 2 if chg > 0.5 else (0 if chg < -0.5 else 1)
         else:
-            result['audusd'] = 1        # Unknown — default flat
+            result['audusd'] = 1
 except Exception as e:
-    result['errors'].append(f'AUD/USD: {e}')
+    result['errors'].append(f'AUD: {e}')
 
-# ── Summary ──────────────────────────────────────────────────────────────────
+# ── Write data.json ────────────────────────────────────────────────────────
 fetched = [k for k in ['spxDrop','vix','creditSpread','inflation',
                         'treasuryTrend','fedPolicy','audusd']
            if result[k] is not None]
-result['fetchedCount'] = len(fetched)
+result['fetchedCount']      = len(fetched)
 result['fetchedIndicators'] = fetched
 
-# ── Write data.json ──────────────────────────────────────────────────────────
 with open('data.json', 'w') as f:
     json.dump(result, f, indent=2)
 
-print(f"✓ data.json written — {now_sydney.strftime('%Y-%m-%d %H:%M AEST')}")
-print(f"  Fetched: {fetched}")
+print(f"✓ {result['fetchedAt']}")
+print(f"  SPX:  {result['spxCurrent']} (ATH {result['spxATH']}, -{result['spxDrop']}%)")
+print(f"  VIX:  {result['vix']}")
+print(f"  CPI:  {result['inflation']}%  10Y: {result['treasuryYield']}%")
+print(f"  HY:   {result['creditSpread']}bps  Fed: {result['fedRate']}%")
+print(f"  AUD:  {result['audusdRate']}")
 if result['errors']:
-    print(f"  Errors:  {result['errors']}")
-print(f"  SPX:  -{result.get('spxDrop','?')}%  VIX: {result.get('vix','?')}")
-print(f"  CPI:  {result.get('inflation','?')}%  10Y: {result.get('treasuryYield','?')}%")
-print(f"  HY:   {result.get('creditSpread','?')}bps  Fed: {result.get('fedRate','?')}%")
-print(f"  AUD:  {result.get('audusdRate','?')}  Trend: {['Falling','Flat','Rising'][result.get('audusd',1)]}")
+    print(f"  Errs: {result['errors']}")
