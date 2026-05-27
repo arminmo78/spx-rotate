@@ -89,35 +89,7 @@ if AV_KEY:
         result['errors'].append(f'AV SPY: {e}')
         print(f"  AV SPY error: {e}")
 
-    # Wait 15 seconds between AV calls (free tier: 5 calls/min)
-    print("  Waiting 15s before VIX call...")
-    time.sleep(15)
-
-    # ── Alpha Vantage: VIX ────────────────────────────────────────────────
-    try:
-        params = {'function':'GLOBAL_QUOTE','symbol':'VIX','apikey':AV_KEY}
-        r = requests.get(url, params=params, timeout=15)
-        d = r.json()
-        q = d.get('Global Quote', {})
-        price_str = q.get('05. price','')
-        print(f"  AV VIX price: '{price_str}'")
-
-        if price_str:
-            vix = float(price_str)
-            if 5 <= vix <= 150:
-                result['vix'] = round(vix, 2)
-                print(f"  VIX: {vix}")
-            else:
-                result['errors'].append(f'VIX: {vix} out of range')
-        elif 'Information' in str(d):
-            result['errors'].append('AV VIX: rate limit')
-            print("  AV VIX rate limit")
-        else:
-            result['errors'].append('AV VIX: no price')
-            print(f"  AV VIX no price. Response: {d}")
-    except Exception as e:
-        result['errors'].append(f'AV VIX: {e}')
-        print(f"  AV VIX error: {e}")
+    # No second AV call needed - VIX comes from FRED below
 else:
     result['errors'].append('AV_API_KEY not configured')
 
@@ -148,6 +120,18 @@ def fred_get(series_id, limit=30):
     obs = [o for o in d.get('observations',[]) if o['value'] not in ('.','')]
     print(f"  FRED {series_id}: {len(obs)} obs, latest={obs[0]['value'] if obs else 'none'}")
     return obs
+
+# VIX via FRED VIXCLS (more reliable than Alpha Vantage for VIX)
+try:
+    obs = fred_get('VIXCLS', 5)
+    if obs:
+        vix = float(obs[0]['value'])
+        if 5 <= vix <= 150:
+            result['vix'] = round(vix, 2)
+            print(f"  VIX: {vix} (FRED)")
+except Exception as e:
+    result['errors'].append(f'VIX: {e}')
+    print(f"  VIX error: {e}")
 
 # CPI
 try:

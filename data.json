@@ -4,10 +4,11 @@
   "errors": [
     "AV VIX: no price"
   ],
-  "spxDrop": 0,
+  "spxDrop": 0.0,
   "spxCurrent": 750.59,
   "spxATH": 750.59,
-  "vix": null,
+  "spyATH": 750.59,
+  "vix": 16.59,
   "creditSpread": 274,
   "inflation": 3.95,
   "treasuryTrend": 2,
@@ -18,7 +19,6 @@
   "geopolitical": 3,
   "audusd": 1,
   "audusdRate": 0.7169,
-  "spyATH": 750.59,
   "fetchedCount": 6,
   "fetchedIndicators": [
     "spxDrop",
