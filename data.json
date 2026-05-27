@@ -1,30 +1,31 @@
 {
-  "fetchedAt": "2026-05-27 17:45 AEST",
+  "fetchedAt": "2026-05-27 17:53 AEST",
   "fetchedDate": "2026-05-27",
   "errors": [
-    "AV ^GSPC: no price in response",
-    "AV ^VIX: rate limit",
-    "CPI: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=CPIAUCSL&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=14",
-    "10Y: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=30",
-    "HY: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=BAMLH0A0HYM2&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=5",
-    "Fed: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=FEDFUNDS&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=6"
+    "AV VIX: no price"
   ],
-  "spxDrop": null,
-  "spxCurrent": null,
-  "spxATH": null,
+  "spxDrop": 0,
+  "spxCurrent": 750.59,
+  "spxATH": 750.59,
   "vix": null,
-  "creditSpread": null,
-  "inflation": null,
-  "treasuryTrend": null,
-  "treasuryYield": null,
-  "fedPolicy": null,
-  "fedRate": null,
+  "creditSpread": 274,
+  "inflation": 3.95,
+  "treasuryTrend": 2,
+  "treasuryYield": 4.56,
+  "fedPolicy": 0,
+  "fedRate": 3.64,
   "earnings": 1,
   "geopolitical": 3,
   "audusd": 1,
   "audusdRate": 0.7169,
-  "fetchedCount": 1,
+  "spyATH": 750.59,
+  "fetchedCount": 6,
   "fetchedIndicators": [
+    "spxDrop",
+    "creditSpread",
+    "inflation",
+    "treasuryTrend",
+    "fedPolicy",
     "audusd"
   ]
 }
