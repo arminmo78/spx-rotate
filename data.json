@@ -1,9 +1,9 @@
 {
-  "fetchedAt": "2026-05-27 17:37 AEST",
+  "fetchedAt": "2026-05-27 17:42 AEST",
   "fetchedDate": "2026-05-27",
   "errors": [
-    "SP500: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=SP500&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2016-01-20&observation_end=2026-05-27&limit=1260",
-    "VIX: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=VIXCLS&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=5",
+    "AV ^GSPC: no price in response",
+    "AV ^VIX: rate limit",
     "CPI: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=CPIAUCSL&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=14",
     "10Y: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=30",
     "HY: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=BAMLH0A0HYM2&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2025-04-22&observation_end=2026-05-27&limit=5",
