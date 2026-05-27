@@ -257,19 +257,14 @@
 
   <!-- Where to find data -->
   <div class="find-card">
-    <div class="find-title">CURRENT READINGS — MAY 27, 2026</div>
-    <div style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.7">
-      SPX <strong style="color:var(--red)">7,473</strong> (ATH 7,522, only <strong style="color:var(--red)">-0.65%</strong> below peak) ·
-      VIX <strong style="color:var(--red)">16.6</strong> ·
-      10Y Yield <strong style="color:var(--amber)">4.51% ↑ Rising</strong> ·
-      CPI <strong style="color:var(--green)">2.4%</strong> ·
-      Fed <strong style="color:var(--amber)">Paused 3.75%</strong> ·
-      AUD/USD <strong style="color:var(--red)">0.717 ↑ Rising</strong>
+    <div class="find-title">CURRENT READINGS</div>
+    <div id="currentReadingsText" style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.7">
+      Tap ⟳ REFRESH at top of page to load live values
     </div>
     <div style="font-size:9px;color:rgba(0,255,135,.6);margin-bottom:12px;line-height:1.5;padding:8px;background:rgba(0,255,135,.04);border-radius:6px;border:1px solid rgba(0,255,135,.1)">
-      Tap <strong style="color:#00ff87">⟳ REFRESH</strong> at the top of this page to automatically fetch the latest values using Claude's web search. Updates all 9 indicators in one tap.
+      Live data updates automatically every weekday at 7am AEST via GitHub Actions.
     </div>
-    <div style="font-size:9px;letter-spacing:.15em;color:var(--muted);margin-bottom:8px">WHERE TO VERIFY EACH INDICATOR</div>
+        <div style="font-size:9px;letter-spacing:.15em;color:var(--muted);margin-bottom:8px">WHERE TO VERIFY EACH INDICATOR</div>
     <div class="find-item">
       <div class="find-name">SPX Drop</div>
       <div class="find-detail">
@@ -896,6 +891,7 @@ async function fetchLatestData() {
 
   saveState();
   updateScore();
+  updateCurrentReadingsText(d);
 
   // ── Status + banner ───────────────────────────────────────────────────────
   const dateStr = d.fetchedAt || d.fetchedDate || 'unknown';
@@ -940,33 +936,53 @@ function showBanner(type, html) {
   banner.innerHTML = html;
 }
 
+function updateCurrentReadingsText(d) {
+  const el = document.getElementById('currentReadingsText');
+  if (!el || !d) return;
+  const trend = ['↓ Falling','→ Flat','↑ Rising'];
+  const fed   = ['Cutting','Paused','Hiking'];
+  const spyDrop = parseFloat(d.spxDrop||0);
+  const spyColor = spyDrop>=20?'var(--green)':spyDrop>=10?'var(--amber)':'var(--red)';
+  const vixColor = parseFloat(d.vix||0)>=40?'var(--green)':parseFloat(d.vix||0)>=30?'var(--amber)':'var(--red)';
+  const cpiColor = parseFloat(d.inflation||0)<=4?'var(--green)':parseFloat(d.inflation||0)<=6?'var(--amber)':'var(--red)';
+  const fedColor = d.fedPolicy===0?'var(--green)':d.fedPolicy===1?'var(--amber)':'var(--red)';
+  el.innerHTML =
+    `SPY <strong style="color:${spyColor}">$${parseFloat(d.spxCurrent||0).toFixed(2)}</strong> `+
+    `(<strong style="color:${spyColor}">${spyDrop<=0?'at ATH':'-'+spyDrop.toFixed(1)+'% from ATH'}</strong>) · `+
+    `VIX <strong style="color:${vixColor}">${d.vix||'—'}</strong> · `+
+    `10Y <strong style="color:var(--red)">${d.treasuryYield||'—'}% ${trend[d.treasuryTrend??2]}</strong> · `+
+    `CPI <strong style="color:${cpiColor}">${d.inflation||'—'}%</strong> · `+
+    `Fed <strong style="color:${fedColor}">${fed[d.fedPolicy??1]} ${d.fedRate||'—'}%</strong> · `+
+    `AUD/USD <strong>${d.audusdRate||'—'}</strong>`;
+}
+
 // ═══ CURRENT MARKET DATA (updated May 27, 2026) ═══
 // SPX: 7,473 (ATH: 7,517 May 14) = -0.6% from peak
 // VIX: 16.7 | 10Y Treasury: 4.57% (RISING) | CPI: 2.4%
 // Fed: Paused at 3.75% | AUD/USD: ~0.635 (rising from lows)
 // HY Spread: ~310bps (calm) | Geopolitical: 3 theatres active
 const CURRENT_DATA = {
-  spxDrop:      0.65,  // SPX 7,473 vs ATH 7,522 (May 27, 2026)
-  vix:          16.59, // VIX May 22 close
-  creditSpread: 310,   // calm credit market
-  inflation:    2.4,   // US CPI Feb 2026
-  treasuryTrend:2,     // Rising (4.29%→4.51% past month)
-  fedPolicy:    1,     // Paused at 3.75%
-  earnings:     1,     // Mixed
+  spxDrop:      0.0,   // SPY $750.59 = S&P 500 at ATH (May 27, 2026)
+  vix:          16.59, // VIX — FRED VIXCLS May 21
+  creditSpread: 274,   // HY OAS 274bps — FRED BAMLH0A0HYM2
+  inflation:    3.95,  // US CPI 3.95% YoY — FRED CPIAUCSL (real)
+  treasuryTrend:2,     // 10Y Rising — FRED DGS10 4.56%
+  fedPolicy:    0,     // Fed CUTTING — FEDFUNDS 3.64%
+  earnings:     1,     // Mixed — manual assessment
   geopolitical: 3,     // Ukraine, Middle East, Taiwan
-  audusd:       2,     // Rising (AUD 0.7173)
+  audusd:       1,     // AUD/USD Flat (0.7169) — open.er-api.com
 };
 
 const DATA_NOTES = {
-  spxDrop:      'SPX 7,473 vs new ATH 7,522 (May 27, 2026). Only 0.65% from peak.',
-  vix:          'VIX 16.59 — calm, no fear. Market complacent.',
-  creditSpread: '~310bps estimate — calm credit market.',
-  inflation:    'US CPI 2.4% (Feb 2026). Under control.',
-  treasuryTrend:'10Y yield 4.506% — rising trend over past month (from 4.29%).',
-  fedPolicy:    'Fed paused at 3.75%. No cut expected near term.',
-  earnings:     'Q1 strong, but forward estimates mixed amid tariff uncertainty.',
+  spxDrop:      'SPY $750.59 = S&P 500 at all-time high. 0% below ATH. Hard gate requires ≥20% drop.',
+  vix:          'VIX 16.59 (FRED VIXCLS) — calm, no fear. Market complacent.',
+  creditSpread: '274bps (FRED BAMLH0A0HYM2) — credit market calm, no systemic stress.',
+  inflation:    'US CPI 3.95% YoY (FRED CPIAUCSL) — elevated, tariff-driven. Above target.',
+  treasuryTrend:'10Y yield 4.56% (FRED DGS10) — rising trend. Bond market not buying safety.',
+  fedPolicy:    'Fed cutting — FEDFUNDS at 3.64%. Monetary easing underway.',
+  earnings:     'Q1 2026 strong, but forward estimates mixed amid tariff uncertainty.',
   geopolitical: '3 active theatres: Ukraine, Middle East, Taiwan tension.',
-  audusd:       'AUD/USD 0.7173 (May 25) — strongly rising from 0.6471 Nov low.',
+  audusd:       'AUD/USD 0.7169 (open.er-api.com) — flat vs prior session.',
 };
 
 function resetOne(id) {

@@ -1,7 +1,7 @@
 // SPX Rotation Calculator — Service Worker
 // Enables offline use and home screen installation
 
-const CACHE = 'spx-rotate-v13';
+const CACHE = 'spx-rotate-v14';
 const ASSETS = [
   '/',
   '/index.html',
