@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-05-27 16:45 AEST",
+  "fetchedAt": "2026-05-27 17:37 AEST",
   "fetchedDate": "2026-05-27",
   "errors": [
     "SP500: 400 Client Error: Bad Request for url: https://api.stlouisfed.org/fred/series/observations?series_id=SP500&api_key=163c400a310d02eb9560d0c70a206251+&file_type=json&sort_order=desc&observation_start=2016-01-20&observation_end=2026-05-27&limit=1260",
