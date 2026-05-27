@@ -1,13 +1,10 @@
 {
-  "fetchedAt": "2026-05-27 17:53 AEST",
+  "fetchedAt": "2026-05-27 17:58 AEST",
   "fetchedDate": "2026-05-27",
-  "errors": [
-    "AV VIX: no price"
-  ],
-  "spxDrop": 0.0,
+  "errors": [],
+  "spxDrop": 0,
   "spxCurrent": 750.59,
   "spxATH": 750.59,
-  "spyATH": 750.59,
   "vix": 16.59,
   "creditSpread": 274,
   "inflation": 3.95,
@@ -19,9 +16,11 @@
   "geopolitical": 3,
   "audusd": 1,
   "audusdRate": 0.7169,
-  "fetchedCount": 6,
+  "spyATH": 750.59,
+  "fetchedCount": 7,
   "fetchedIndicators": [
     "spxDrop",
+    "vix",
     "creditSpread",
     "inflation",
     "treasuryTrend",
