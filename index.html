@@ -868,6 +868,7 @@ async function fetchLatestData() {
     return;
   }
 
+  window._lastDataJson = d; // store for resetToCurrentData date display
   // Clear any stale ATH stored in localStorage — always use data.json value
   if (d.spxATH) {
     localStorage.removeItem('spy_ath');
@@ -891,6 +892,7 @@ async function fetchLatestData() {
 
   saveState();
   updateScore();
+  updateDataNotes(d);
   updateCurrentReadingsText(d);
 
   // ── Status + banner ───────────────────────────────────────────────────────
@@ -934,6 +936,19 @@ function showBanner(type, html) {
   banner.style.display = 'block';
   banner.style.borderColor = type === 'ok' ? 'rgba(0,255,135,.2)' : 'rgba(255,217,61,.2)';
   banner.innerHTML = html;
+}
+
+function updateDataNotes(d) {
+  if (!d) return;
+  const trend = ['↓ Falling','→ Flat','↑ Rising'];
+  const fed   = ['Cutting','Paused','Hiking'];
+  if (d.spxCurrent) DATA_NOTES.spxDrop = `SPY $${parseFloat(d.spxCurrent).toFixed(2)} — S&P 500 ${parseFloat(d.spxDrop||0)<=0?'at all-time high':'-'+parseFloat(d.spxDrop).toFixed(1)+'% from ATH'}. Hard gate requires ≥20% drop.`;
+  if (d.vix)         DATA_NOTES.vix = `VIX ${d.vix} (FRED VIXCLS) — ${parseFloat(d.vix)>=40?'PANIC — rotation signal':'calm, no fear. Market complacent.'}.`;
+  if (d.creditSpread) DATA_NOTES.creditSpread = `${d.creditSpread}bps (FRED BAMLH0A0HYM2) — ${parseFloat(d.creditSpread)>=800?'systemic stress':parseFloat(d.creditSpread)>=600?'elevated stress':'credit market calm, no systemic stress.'}.`;
+  if (d.inflation)   DATA_NOTES.inflation = `US CPI ${d.inflation}% YoY (FRED CPIAUCSL) — ${parseFloat(d.inflation)<=4?'under control.':'elevated'+( parseFloat(d.inflation)>6?' — HARD GATE BLOCKS ROTATION':' tariff-driven. Above 2% target.')}.`;
+  if (d.treasuryYield) DATA_NOTES.treasuryTrend = `10Y yield ${d.treasuryYield}% (FRED DGS10) — ${trend[d.treasuryTrend??2]} trend.${d.treasuryTrend===2?' Bond market selling, not buying safety.':d.treasuryTrend===0?' Bond market backing recovery.':' Flat — uncertain signal.'}`;
+  if (d.fedRate)     DATA_NOTES.fedPolicy = `${fed[d.fedPolicy??1]} — FEDFUNDS at ${d.fedRate}%.${d.fedPolicy===0?' Monetary easing underway.':d.fedPolicy===1?' Paused — watching data.':' Tightening — headwind for growth.'}`;
+  if (d.audusdRate)  DATA_NOTES.audusd = `AUD/USD ${d.audusdRate} (open.er-api.com) — ${trend[d.audusd??1].toLowerCase()} vs prior session.`;
 }
 
 function updateCurrentReadingsText(d) {
@@ -992,7 +1007,19 @@ function resetOne(id) {
 }
 
 function resetToCurrentData() {
-  Object.assign(vals, CURRENT_DATA);
+  // If we have live data from data.json, use that; otherwise fall back to CURRENT_DATA
+  const live = window._lastDataJson;
+  if (live) {
+    const map = {spxDrop:'spxDrop',vix:'vix',creditSpread:'creditSpread',
+                  inflation:'inflation',treasuryTrend:'treasuryTrend',
+                  fedPolicy:'fedPolicy',earnings:'earnings',
+                  geopolitical:'geopolitical',audusd:'audusd'};
+    Object.entries(map).forEach(([k,id]) => {
+      if (live[k] !== null && live[k] !== undefined) vals[id] = parseFloat(live[k]);
+    });
+  } else {
+    Object.assign(vals, CURRENT_DATA);
+  }
   INDS.forEach(ind => renderCard(ind));
   // Show the data banner
   const banner = document.getElementById('currentDataBanner');
@@ -1000,7 +1027,8 @@ function resetToCurrentData() {
     const ind = INDS.find(i=>i.id===k);
     return `<span style="color:rgba(255,255,255,.5)">${ind?ind.label:k}:</span> ${v}`;
   }).join('<br>');
-  banner.innerHTML = '<strong style="color:rgba(0,255,135,.9)">⟳ Reset to current market data (May 27, 2026)</strong><br><br>' + lines;
+  const dataDate = (window._lastDataJson && window._lastDataJson.fetchedDate) || new Date().toISOString().split('T')[0];
+  banner.innerHTML = '<strong style="color:rgba(0,255,135,.9)">⟳ Reset to current market data (' + dataDate + ')</strong><br><br>' + lines;
   banner.style.display = 'block';
 }
 
